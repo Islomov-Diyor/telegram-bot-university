@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     ADMIN_CHAT_IDS: str = ""
     ADMIN_CHANNEL_ID: Optional[str] = None
 
+    # Initial Admin Credentials (Strong & Configurable via .env)
+    ADMIN_USERNAME: str = "univ_admin"
+    ADMIN_PASSWORD: Optional[str] = None
+
     # Web & API
     SECRET_KEY: str = "super_secret_jwt_key_university_talented_students_2026"
     ALGORITHM: str = "HS256"

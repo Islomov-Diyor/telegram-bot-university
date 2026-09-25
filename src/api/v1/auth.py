@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
@@ -14,6 +14,38 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 class ChatIdUpdateRequest(BaseModel):
     telegram_chat_id: int
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=4)
+    new_password: str = Field(..., min_length=8)
+
+
+@router.put("/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    current_admin: Admin = Depends(get_current_admin),
+    session: AsyncSession = Depends(get_db)
+):
+    """Securely change current administrator password."""
+    if not verify_password(data.current_password, current_admin.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Joriy parol noto'g'ri kiritildi."
+        )
+
+    # Password complexity checks
+    new_pwd = data.new_password
+    if len(new_pwd) < 8 or not any(c.isdigit() for c in new_pwd) or not any(c.isalpha() for c in new_pwd):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Yangi parol kamida 8 ta belgidan iborat bo'lishi hamda raqam va harflarni o'z ichiga olishi shart."
+        )
+
+    from src.core.security import get_password_hash
+    current_admin.password_hash = get_password_hash(new_pwd)
+    await session.commit()
+    return {"message": "Parol muvaffaqiyatli o'zgartirildi!"}
 
 
 @router.post("/login", response_model=TokenResponse)

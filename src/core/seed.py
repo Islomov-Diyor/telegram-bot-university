@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from sqlalchemy import select
+from src.core.config import settings
 from src.core.database import AsyncSessionLocal, create_tables
 from src.models.admin import Admin
 from src.models.faculty import Faculty
@@ -17,18 +18,26 @@ async def seed_initial_data():
 
     async with AsyncSessionLocal() as session:
         # 1. Seed Super Admin
-        admin_stmt = select(Admin).where(Admin.username == "admin")
+        admin_username = settings.ADMIN_USERNAME or "univ_admin"
+        admin_stmt = select(Admin).where(Admin.username == admin_username)
         existing_admin = (await session.execute(admin_stmt)).scalar_one_or_none()
         if not existing_admin:
+            import secrets
+            admin_password = settings.ADMIN_PASSWORD or f"Univ_{secrets.token_hex(6)}!#"
             admin = Admin(
-                username="admin",
-                password_hash=get_password_hash("admin123"),
+                username=admin_username,
+                password_hash=get_password_hash(admin_password),
                 full_name="Bosh Administrator",
                 role="superadmin",
                 is_active=True
             )
             session.add(admin)
-            print(" Default admin created: username='admin', password='admin123'")
+            print("\n" + "=" * 60)
+            print("🔐 YANGI XAVFSIZ ADMINISTRATOR AKKAUNTI YARATILDI:")
+            print(f"👉 Login:  {admin_username}")
+            print(f"👉 Parol:  {admin_password}")
+            print("⚠️ Ushbu ma'lumotlarni saqlab qo'ying! Parolni admin panel orqali o'zgartirishingiz mumkin.")
+            print("=" * 60 + "\n")
 
         # 2. Check if faculties already exist
         fac_stmt = select(Faculty)

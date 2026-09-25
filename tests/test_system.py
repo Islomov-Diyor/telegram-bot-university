@@ -127,6 +127,41 @@ async def test_rest_api_auth_and_endpoints():
         assert stats["clubs_count"] > 0
         assert stats["students_count"] > 0
 
+        # 4.1 /auth/change-password tests
+        # Bad current password
+        bad_change = await client.put(
+            "/api/v1/auth/change-password",
+            json={"current_password": "wrongpassword", "new_password": "NewStrongPass2026!"},
+            headers=headers
+        )
+        assert bad_change.status_code == 400
+
+        # Too short password (caught by Pydantic min_length=8)
+        short_change = await client.put(
+            "/api/v1/auth/change-password",
+            json={"current_password": "admin123", "new_password": "short"},
+            headers=headers
+        )
+        assert short_change.status_code == 422
+
+        # Successful change
+        good_change = await client.put(
+            "/api/v1/auth/change-password",
+            json={"current_password": "admin123", "new_password": "SuperSecurePass2026!#"},
+            headers=headers
+        )
+        assert good_change.status_code == 200
+
+        # Verify old password no longer works
+        old_login = await client.post("/api/v1/auth/login", json={"username": "admin", "password": "admin123"})
+        assert old_login.status_code == 401
+
+        # Verify new password works
+        new_login = await client.post("/api/v1/auth/login", json={"username": "admin", "password": "SuperSecurePass2026!#"})
+        assert new_login.status_code == 200
+        # Restore token header for rest of tests
+        headers = {"Authorization": f"Bearer {new_login.json()['access_token']}"}
+
         # 5. /clubs
         clubs_res = await client.get("/api/v1/clubs", headers=headers)
         assert clubs_res.status_code == 200

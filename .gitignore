@@ -22,18 +22,31 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
 
 # Virtual environments
 venv/
 .venv/
 
-# Environment variables
+# Environment variables & secrets (NEVER PUSH TO GITHUB)
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+cookie.txt
 
 # Data and SQLite databases
 data/
 *.db
+*.sqlite
 *.sqlite3
+
+# Exports & Temporary output
+*.xlsx
+*.csv
+!tests/
 
 # Logs
 logs/

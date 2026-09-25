@@ -659,4 +659,41 @@ function setupForms() {
       showToast('Saqlashda xatolik yuz berdi', 'error');
     }
   });
+
+  // Change Password Submit
+  document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('currentPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+
+    if (newPassword !== confirmPassword) {
+      showToast('Yangi parollar bir-biriga mos kelmadi!', 'error');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      showToast('Yangi parol kamida 8 ta belgidan iborat bo\'lishi kerak!', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/v1/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Parolni o\'zgartirishda xatolik');
+
+      showToast(data.message || 'Parol muvaffaqiyatli o\'zgartirildi!', 'success');
+      document.getElementById('changePasswordForm').reset();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
 }
