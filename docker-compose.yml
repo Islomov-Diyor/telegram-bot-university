@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: university_talented_students_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ADMIN_CHAT_IDS=${ADMIN_CHAT_IDS}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=sqlite+aiosqlite:///./data/university_clubs.db
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/auth/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL'ga o'tishni istasangiz, quyidagi blokni yoqing va DATABASE_URL ni almashtiring:
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: university_clubs_postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: supersecretpassword
+  #     POSTGRES_DB: university_clubs
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   pgdata:

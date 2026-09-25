@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boshqaruv Paneli | Universitet Iqtidorli Talabalar Tizimi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🎓</div>
+        <div>
+          <div class="brand-title">IQTIDORLI TALABALAR</div>
+          <div class="brand-subtitle">Universitet Boshqaruv Tizimi</div>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li>
+          <a class="nav-item active" data-tab="dashboard">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="clubs">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            <span>To'garaklar</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="students">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <span>Iqtidorli Talabalar</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="academic">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+            <span>Fakultet va Yo'nalishlar</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="settings">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <span>Sozlamalar & Notification</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="avatarLetter">A</div>
+          <div class="user-meta">
+            <div class="name" id="adminFullName">Administrator</div>
+            <div class="role" id="adminRole">Super Admin</div>
+          </div>
+        </div>
+        <button class="btn-icon" id="logoutBtn" title="Chiqish">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- 1. DASHBOARD TAB -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title">Universitet Ko'rsatkichlari</h1>
+            <p class="page-desc">Iqtidorli talabalar va to'garaklar faoliyatining umumiy statistikasi</p>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="glass-panel metric-card">
+            <div class="metric-info">
+              <div class="label">Jami A'zo Talabalar</div>
+              <div class="value" id="kpiStudents">0</div>
+            </div>
+            <div class="metric-icon-box icon-emerald">👥</div>
+          </div>
+          <div class="glass-panel metric-card">
+            <div class="metric-info">
+              <div class="label">Faol To'garaklar</div>
+              <div class="value" id="kpiClubs">0</div>
+            </div>
+            <div class="metric-icon-box icon-blue">🎯</div>
+          </div>
+          <div class="glass-panel metric-card">
+            <div class="metric-info">
+              <div class="label">Fakultetlar</div>
+              <div class="value" id="kpiFaculties">0</div>
+            </div>
+            <div class="metric-icon-box icon-amber">🏛</div>
+          </div>
+          <div class="glass-panel metric-card">
+            <div class="metric-info">
+              <div class="label">Ta'lim Yo'nalishlari</div>
+              <div class="value" id="kpiDirections">0</div>
+            </div>
+            <div class="metric-icon-box icon-rose">📚</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Popular clubs -->
+          <div class="glass-panel" style="padding: 24px;">
+            <h3 style="font-size: 16px; margin-bottom: 20px; font-weight: 700;">🔥 Eng Ommabop To'garaklar</h3>
+            <div id="topClubsList" style="display: flex; flex-direction: column; gap: 14px;">
+              <p style="color: var(--text-muted); font-size: 13px;">Ma'lumotlar yuklanmoqda...</p>
+            </div>
+          </div>
+
+          <!-- Faculty breakdown -->
+          <div class="glass-panel" style="padding: 24px;">
+            <h3 style="font-size: 16px; margin-bottom: 20px; font-weight: 700;">🏛 Fakultetlar Kesimida Talabalar</h3>
+            <div id="facultyBreakdownList" style="display: flex; flex-direction: column; gap: 14px;">
+              <p style="color: var(--text-muted); font-size: 13px;">Ma'lumotlar yuklanmoqda...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. CLUBS TAB -->
+      <section id="tab-clubs" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title">To'garaklar Boshqaruvi</h1>
+            <p class="page-desc">Mavjud to'garaklar, dars vaqtlari, xonalari va rahbarlarini boshqarish</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="openClubModal()">
+              <span>+ Yangi to'garak ochish</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="glass-panel filter-toolbar">
+          <div class="filter-group">
+            <select id="clubFilterFaculty" class="form-select" onchange="filterClubs()">
+              <option value="">Barcha fakultetlar</option>
+            </select>
+          </div>
+          <div id="clubsCountBadge" class="badge badge-indigo">0 ta to'garak</div>
+        </div>
+
+        <div id="clubsGrid" class="clubs-grid">
+          <!-- Club cards rendered here -->
+        </div>
+      </section>
+
+      <!-- 3. STUDENTS TAB -->
+      <section id="tab-students" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title">Iqtidorli Talabalar Ro'yxati</h1>
+            <p class="page-desc">To'garaklarga a'zo bo'lgan talabalar jurnali va ma'lumotlarni eksport qilish</p>
+          </div>
+          <div class="header-actions">
+            <a id="btnExportExcel" class="btn btn-success" href="/api/v1/export/excel" target="_blank">
+              <span>📥 Excel (.xlsx)</span>
+            </a>
+            <a id="btnExportCsv" class="btn btn-secondary" href="/api/v1/export/csv" target="_blank">
+              <span>📄 CSV</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="glass-panel filter-toolbar">
+          <div class="search-box">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input type="text" id="studentSearchInput" placeholder="Talaba F.I.Sh, tel yoki @username..." oninput="debounceStudentSearch()">
+          </div>
+
+          <div class="filter-group">
+            <select id="studentFilterFaculty" class="form-select" onchange="onStudentFacultyChange()">
+              <option value="">Barcha fakultetlar</option>
+            </select>
+            <select id="studentFilterClub" class="form-select" onchange="fetchStudents()">
+              <option value="">Barcha to'garaklar</option>
+            </select>
+            <select id="studentFilterCourse" class="form-select" onchange="fetchStudents()">
+              <option value="">Barcha kurslar</option>
+              <option value="1">1-kurs</option>
+              <option value="2">2-kurs</option>
+              <option value="3">3-kurs</option>
+              <option value="4">4-kurs</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="glass-panel table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Talaba F.I.Sh</th>
+                <th>Fakultet</th>
+                <th>Yo'nalish</th>
+                <th>To'garak</th>
+                <th>Kurs</th>
+                <th>Telefon</th>
+                <th>Telegram</th>
+                <th>Sana</th>
+                <th>Amal</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody">
+              <!-- Students populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. ACADEMIC TAB -->
+      <section id="tab-academic" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title">Fakultet va Ta'lim Yo'nalishlari</h1>
+            <p class="page-desc">Universitet akademik strukturasini shakllantirish</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary" onclick="openFacultyModal()">+ Fakultet qo'shish</button>
+            <button class="btn btn-primary" onclick="openDirectionModal()">+ Yo'nalish qo'shish</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Faculties Table -->
+          <div class="glass-panel" style="padding: 24px;">
+            <h3 style="font-size: 16px; margin-bottom: 16px; font-weight: 700;">🏛 Fakultetlar</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nomi</th>
+                  <th>Yo'nalishlar</th>
+                  <th>Amal</th>
+                </tr>
+              </thead>
+              <tbody id="facultiesTableBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Directions Table -->
+          <div class="glass-panel" style="padding: 24px;">
+            <h3 style="font-size: 16px; margin-bottom: 16px; font-weight: 700;">📚 Ta'lim Yo'nalishlari</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Yo'nalish</th>
+                  <th>Fakultet</th>
+                  <th>To'garaklar</th>
+                  <th>Amal</th>
+                </tr>
+              </thead>
+              <tbody id="directionsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. SETTINGS TAB -->
+      <section id="tab-settings" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title">Tizim Sozlamalari</h1>
+            <p class="page-desc">Telegram bildirishnomalari va tizim parametrlari</p>
+          </div>
+        </div>
+
+        <div style="max-width: 680px; display: flex; flex-direction: column; gap: 24px;">
+          <!-- Telegram Management Channel setup -->
+          <div class="glass-panel" style="padding: 28px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <h3 style="font-size: 16px; font-weight: 700;">📢 Boshqaruv Telegram Kanali (Talab 16)</h3>
+              <span class="badge badge-emerald">Asosiy Bildirishnoma</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px;">
+              Har safar yangi talaba to'garakka a'zo bo'lganda ushbu <b>Telegram kanalga</b> avtomatik tarzda talabaning barcha ma'lumotlari (F.I.Sh, fakultet, yo'nalish, kurs, telefon, username) yuboriladi.
+            </p>
+
+            <div style="background: rgba(11, 15, 25, 0.4); padding: 14px; border-radius: var(--radius-md); font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">
+              <b>Qanday ulanadi?</b><br>
+              1. Telegramda universitet ma'murlari uchun <b>kanal yoki guruh</b> oching.<br>
+              2. Botingizni ushbu kanalga a'zo qilib, unga <b>Administrator (Xabarlar yozish)</b> huquqini bering.<br>
+              3. Kanal linkini (masalan: <code>@iqtidorli_boshqaruv</code>) yoki ID sini pastga kiriting.
+            </div>
+
+            <form id="telegramChannelForm">
+              <div class="form-group">
+                <label class="form-label" for="telegramChannelInput">Kanal @username yoki Chat ID</label>
+                <input 
+                  type="text" 
+                  id="telegramChannelInput" 
+                  class="form-input" 
+                  style="width: 100%;" 
+                  placeholder="@iqtidorli_talabalar_kanali yoki -1001234567890" 
+                  required
+                >
+              </div>
+              <div style="display: flex; gap: 12px;">
+                <button type="submit" class="btn btn-primary">💾 Kanalni saqlash</button>
+                <button type="button" id="btnTestChannel" class="btn btn-secondary" onclick="sendTestChannelPing()">
+                  🔔 Sinov xabari yuborish
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Personal Admin Chat ID -->
+          <div class="glass-panel" style="padding: 28px;">
+            <h3 style="font-size: 16px; margin-bottom: 8px; font-weight: 700;">👤 Shaxsiy Admin Telegram ID</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;">
+              Kanalga qo'shimcha ravishda o'z shaxsiy Telegramingizga ham arizalar kelishini istasangiz, Telegram Chat ID'ingizni kiriting.
+              (O'z Telegram ID'ingizni bilish uchun <code>@userinfobot</code> ga <code>/start</code> yuboring).
+            </p>
+
+            <form id="telegramChatIdForm">
+              <div class="form-group">
+                <label class="form-label" for="telegramChatIdInput">Shaxsiy Telegram Chat ID</label>
+                <input type="text" id="telegramChatIdInput" class="form-input" style="width: 100%;" placeholder="Masalan: 123456789">
+              </div>
+              <button type="submit" class="btn btn-secondary">Shaxsiy ID'ni saqlash</button>
+            </form>
+          </div>
+
+          <!-- Architecture & Database Info -->
+          <div class="glass-panel" style="padding: 28px;">
+            <h3 style="font-size: 16px; margin-bottom: 14px; font-weight: 700;">⚙️ Texnik Ma'lumotlar</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--text-secondary);">
+              <div>🔹 <b>Backend Framework:</b> FastAPI (Async) + aiogram 3.x</div>
+              <div>🔹 <b>Ma'lumotlar Bazasi:</b> SQLite (Production-ready SQLAlchemy 2.0 ORM)</div>
+              <div>🔹 <b>PostgreSQL ko'chirish:</b> 100% tayyor (.env orqali ulanadi)</div>
+              <div>🔹 <b>API Hujjatlari (Swagger):</b> <a href="/docs" target="_blank" style="color: #818CF8;">/docs sahifasida</a></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Club Create / Edit -->
+  <div id="clubModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="clubModalTitle" style="font-size: 16px; font-weight: 700;">To'garak ma'lumotlari</h3>
+        <button class="btn-icon" onclick="closeClubModal()">&times;</button>
+      </div>
+      <form id="clubForm">
+        <div class="modal-body">
+          <input type="hidden" id="clubFormId">
+          <div class="form-group">
+            <label class="form-label">Ta'lim Yo'nalishi *</label>
+            <select id="clubFormDirectionId" class="form-select" style="width: 100%;" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">To'garak Nomi *</label>
+            <input type="text" id="clubFormName" class="form-input" style="width: 100%;" required placeholder="Masalan: English Speaking Club">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Qisqacha Ma'lumot (Tavsifi) *</label>
+            <textarea id="clubFormDesc" class="form-textarea" required placeholder="To'garakning maqsadi va vazifalari..."></textarea>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label">Kunlari * (Requirement 13)</label>
+              <input type="text" id="clubFormDays" class="form-input" style="width: 100%;" required placeholder="Dushanba, Chorshanba">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vaqti * (Requirement 13)</label>
+              <input type="text" id="clubFormTime" class="form-input" style="width: 100%;" required placeholder="14:00 - 15:30">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Xona / Joyi * (Requirement 13)</label>
+            <input type="text" id="clubFormRoom" class="form-input" style="width: 100%;" required placeholder="302-xona, A-bino">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label">To'garak Rahbari * (Requirement 13)</label>
+              <input type="text" id="clubFormLeaderName" class="form-input" style="width: 100%;" required placeholder="Dots. Xoliqov D.M.">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Rahbar Aloqasi * (Requirement 13)</label>
+              <input type="text" id="clubFormLeaderContact" class="form-input" style="width: 100%;" required placeholder="+998901234567 / @rahbar">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeClubModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Faculty Create / Edit -->
+  <div id="facultyModal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="facultyModalTitle" style="font-size: 16px; font-weight: 700;">Fakultet qo'shish</h3>
+        <button class="btn-icon" onclick="closeFacultyModal()">&times;</button>
+      </div>
+      <form id="facultyForm">
+        <div class="modal-body">
+          <input type="hidden" id="facultyFormId">
+          <div class="form-group">
+            <label class="form-label">Fakultet Nomi *</label>
+            <input type="text" id="facultyFormName" class="form-input" style="width: 100%;" required placeholder="Ingliz filologiyasi fakulteti">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Qisqartma Kodi</label>
+            <input type="text" id="facultyFormCode" class="form-input" style="width: 100%;" placeholder="IFF">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeFacultyModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Direction Create / Edit -->
+  <div id="directionModal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 id="directionModalTitle" style="font-size: 16px; font-weight: 700;">Ta'lim Yo'nalishi</h3>
+        <button class="btn-icon" onclick="closeDirectionModal()">&times;</button>
+      </div>
+      <form id="directionForm">
+        <div class="modal-body">
+          <input type="hidden" id="directionFormId">
+          <div class="form-group">
+            <label class="form-label">Tegishli Fakultet *</label>
+            <select id="directionFormFacultyId" class="form-select" style="width: 100%;" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Yo'nalish Nomi *</label>
+            <input type="text" id="directionFormName" class="form-input" style="width: 100%;" required placeholder="Ingliz tili va adabiyoti">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ta'lim Kodi</label>
+            <input type="text" id="directionFormCode" class="form-input" style="width: 100%;" placeholder="60111800">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeDirectionModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast notifications container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

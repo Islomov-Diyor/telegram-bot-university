@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kirish | Universitet Iqtidorli Talabalar Tizimi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <style>
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 40px;
+      position: relative;
+    }
+    .login-brand {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-brand .brand-icon {
+      margin: 0 auto 16px auto;
+      width: 56px;
+      height: 56px;
+      font-size: 26px;
+    }
+    .login-brand h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .login-brand p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .alert-box {
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #FB7185;
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="glass-panel login-card">
+      <div class="login-brand">
+        <div class="brand-icon">🎓</div>
+        <h1>Iqtidorli Talabalar Tizimi</h1>
+        <p>Universitet Administrator Paneli</p>
+      </div>
+
+      <div id="errorAlert" class="alert-box"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="username">Administrator Logini</label>
+          <input 
+            type="text" 
+            id="username" 
+            class="form-input" 
+            style="width: 100%;" 
+            placeholder="admin" 
+            required 
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Maxfiy Parol</label>
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input" 
+            style="width: 100%;" 
+            placeholder="••••••••" 
+            required 
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
+          <span>Tizimga kirish</span>
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 24px; font-size: 12px; color: var(--text-muted);">
+        Standart login: <code>admin</code> | Parol: <code>admin123</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const errorAlert = document.getElementById('errorAlert');
+    const submitBtn = document.getElementById('submitBtn');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorAlert.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Kirilmoqda...';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Kirishda xatolik yuz berdi.');
+        }
+
+        // Store token in localStorage as backup
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('admin_user', JSON.stringify(data.admin));
+
+        window.location.href = '/admin';
+      } catch (err) {
+        errorAlert.innerText = err.message;
+        errorAlert.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Tizimga kirish';
+      }
+    });
+  </script>
+</body>
+</html>
