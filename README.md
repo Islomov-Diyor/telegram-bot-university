@@ -61,39 +61,26 @@ pip install -r requirements.txt
 ```
 
 ### 3. Konfiguratsiya (.env)
-Loyihada `.env` fayli mavjud. Undagi quyidagi qatorlarni to'ldiring:
-```env
-# Telegram botingiz tokeni (@BotFather orqali olinadi)
-BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ
-
-# Administratorlarning Telegram Chat ID lari (vergul bilan)
-ADMIN_CHAT_IDS=123456789,987654321
-
-# Xavfsizlik kaliti (istalgan uzun ixtiyoriy matn)
-SECRET_KEY=super_secret_jwt_key_university_talented_students_2026
-
-# Ma'lumotlar bazasi (Dastlab SQLite):
-DATABASE_URL=sqlite+aiosqlite:///./data/university_clubs.db
-```
-
-### 4. Dastlabki ma'lumotlarni bazaga kiritish (Seed)
+Lokal sozlash uchun `.env.example` faylidan nusxa olib, `.env` faylini yarating va kerakli parametrlarni (Bot token va xavfsiz admin parolini) kiriting:
 ```bash
-python -m src.core.seed
+# Windows:
+copy .env.example .env
+
+# Linux/macOS:
+cp .env.example .env
 ```
-*Bu buyruq barcha jadvallarni yaratadi, boshlang'ich fakultetlar, yo'nalishlar va to'garaklarni hamda standart admin hisobini yuklaydi.*
 
-Standart kirish ma'lumotlari:
-- **Login:** `admin`
-- **Parol:** `admin123`
-
-### 5. Serverni ishga tushirish
+### 4. Dasturni ishga tushirish
+Dastur ishga tushganda barcha kerakli jadvallar va dastlabki ma'lumotlar avtomatik ravishda tayyorlanadi:
 ```bash
 python -m src.main
 ```
-Server ishga tushgach:
+*Windows foydalanuvchilari uchun loyiha ildizidagi `start_app.bat` faylini 1 bosish orqali ishga tushirish ham mumkin.*
+
+Ishga tushgach:
 - 🌐 **Web Admin Panel:** [http://localhost:8000/login](http://localhost:8000/login)
 - 📚 **Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- 🤖 **Telegram Bot:** Telegramda o'z botingizga `/start` yuborib test qiling.
+- 🤖 **Telegram Bot:** Telegramda o'z botingizga `/start` yuborib tekshirishingiz mumkin.
 
 ---
 
