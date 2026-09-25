@@ -4,6 +4,7 @@ from httpx import AsyncClient, ASGITransport
 from src.main import app
 from src.core.database import AsyncSessionLocal, create_tables
 from src.core.seed import seed_initial_data
+from src.core.config import settings
 from src.repositories.club_repo import ClubRepository
 from src.repositories.registration_repo import RegistrationRepository
 from src.services.registration_service import RegistrationService
@@ -108,7 +109,8 @@ async def test_rest_api_auth_and_endpoints():
         assert bad_login.status_code == 401
 
         # 2. Valid login
-        login_res = await client.post("/api/v1/auth/login", json={"username": "admin", "password": "admin123"})
+        curr_pwd = settings.ADMIN_PASSWORD
+        login_res = await client.post("/api/v1/auth/login", json={"username": "admin", "password": curr_pwd})
         assert login_res.status_code == 200
         token_data = login_res.json()
         assert "access_token" in token_data
@@ -139,28 +141,36 @@ async def test_rest_api_auth_and_endpoints():
         # Too short password (caught by Pydantic min_length=8)
         short_change = await client.put(
             "/api/v1/auth/change-password",
-            json={"current_password": "admin123", "new_password": "short"},
+            json={"current_password": curr_pwd, "new_password": "short"},
             headers=headers
         )
         assert short_change.status_code == 422
 
         # Successful change
+        temp_pwd = "SuperSecurePass2026!#"
         good_change = await client.put(
             "/api/v1/auth/change-password",
-            json={"current_password": "admin123", "new_password": "SuperSecurePass2026!#"},
+            json={"current_password": curr_pwd, "new_password": temp_pwd},
             headers=headers
         )
         assert good_change.status_code == 200
 
         # Verify old password no longer works
-        old_login = await client.post("/api/v1/auth/login", json={"username": "admin", "password": "admin123"})
+        old_login = await client.post("/api/v1/auth/login", json={"username": "admin", "password": curr_pwd})
         assert old_login.status_code == 401
 
         # Verify new password works
-        new_login = await client.post("/api/v1/auth/login", json={"username": "admin", "password": "SuperSecurePass2026!#"})
+        new_login = await client.post("/api/v1/auth/login", json={"username": "admin", "password": temp_pwd})
         assert new_login.status_code == 200
-        # Restore token header for rest of tests
+
+        # Restore original password for clean state
         headers = {"Authorization": f"Bearer {new_login.json()['access_token']}"}
+        restore_change = await client.put(
+            "/api/v1/auth/change-password",
+            json={"current_password": temp_pwd, "new_password": curr_pwd},
+            headers=headers
+        )
+        assert restore_change.status_code == 200
 
         # 5. /clubs
         clubs_res = await client.get("/api/v1/clubs", headers=headers)
