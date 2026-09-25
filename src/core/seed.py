@@ -18,7 +18,7 @@ async def seed_initial_data():
 
     async with AsyncSessionLocal() as session:
         # 1. Seed Super Admin
-        admin_username = settings.ADMIN_USERNAME or "univ_admin"
+        admin_username = settings.ADMIN_USERNAME or "admin"
         admin_stmt = select(Admin).where(Admin.username == admin_username)
         existing_admin = (await session.execute(admin_stmt)).scalar_one_or_none()
         if not existing_admin:
@@ -33,11 +33,13 @@ async def seed_initial_data():
             )
             session.add(admin)
             print("\n" + "=" * 60)
-            print("🔐 YANGI XAVFSIZ ADMINISTRATOR AKKAUNTI YARATILDI:")
-            print(f"👉 Login:  {admin_username}")
-            print(f"👉 Parol:  {admin_password}")
-            print("⚠️ Ushbu ma'lumotlarni saqlab qo'ying! Parolni admin panel orqali o'zgartirishingiz mumkin.")
+            print("[INFO] YANGI XAVFSIZ ADMINISTRATOR AKKAUNTI YARATILDI:")
+            print(f"-> Login:  {admin_username}")
+            print(f"-> Parol:  {admin_password}")
             print("=" * 60 + "\n")
+        elif settings.ADMIN_PASSWORD:
+            existing_admin.password_hash = get_password_hash(settings.ADMIN_PASSWORD)
+            print(f"[OK] Admin paroli yangilandi: {admin_username}")
 
         # 2. Check if faculties already exist
         fac_stmt = select(Faculty)

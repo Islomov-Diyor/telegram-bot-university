@@ -1,20 +1,39 @@
 // State
 let allFaculties = [];
 let allDirections = [];
+let currentClubs = [];
 let searchDebounceTimer = null;
 
-// Initialize on DOM load
-document.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
-  setupNavigation();
-  await loadInitialData();
-  await switchTab('dashboard');
-  setupForms();
-});
+// Authenticated API Fetch Helper
+async function apiFetch(url, options = {}) {
+  options.headers = options.headers || {};
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+  options.credentials = 'include';
+
+  try {
+    const response = await fetch(url, options);
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('admin_user');
+      window.location.href = '/login';
+      throw new Error('Autentifikatsiyadan o\'tilmagan.');
+    }
+    return response;
+  } catch (err) {
+    if (err.message === 'Autentifikatsiyadan o\'tilmagan.') {
+      window.location.href = '/login';
+    }
+    throw err;
+  }
+}
 
 // Toast notification
 function showToast(message, type = 'success') {
   const container = document.getElementById('toastContainer');
+  if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.innerHTML = `
@@ -28,10 +47,19 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkAuth();
+  setupNavigation();
+  await loadInitialData();
+  await switchTab('dashboard');
+  setupForms();
+});
+
 // Auth Verification
 async function checkAuth() {
   try {
-    const res = await fetch('/api/v1/auth/me');
+    const res = await apiFetch('/api/v1/auth/me');
     if (!res.ok) throw new Error('Not authenticated');
     const admin = await res.json();
     document.getElementById('adminFullName').innerText = admin.full_name;
@@ -47,7 +75,7 @@ async function checkAuth() {
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   try {
-    await fetch('/api/v1/auth/logout', { method: 'POST' });
+    await apiFetch('/api/v1/auth/logout', { method: 'POST' });
   } finally {
     localStorage.clear();
     window.location.href = '/login';
@@ -99,12 +127,14 @@ async function switchTab(tabName) {
 async function loadInitialData() {
   try {
     const [facRes, dirRes] = await Promise.all([
-      fetch('/api/v1/faculties'),
-      fetch('/api/v1/directions')
+      apiFetch('/api/v1/faculties'),
+      apiFetch('/api/v1/directions')
     ]);
 
-    allFaculties = await facRes.json();
-    allDirections = await dirRes.json();
+    const facData = await facRes.json();
+    const dirData = await dirRes.json();
+    allFaculties = Array.isArray(facData) ? facData : [];
+    allDirections = Array.isArray(dirData) ? dirData : [];
 
     populateFacultyDropdowns();
   } catch (err) {
@@ -119,35 +149,39 @@ function populateFacultyDropdowns() {
     if (!el) return;
     const isFilter = id.includes('Filter');
     el.innerHTML = isFilter ? '<option value="">Barcha fakultetlar</option>' : '<option value="">Fakultetni tanlang</option>';
-    allFaculties.forEach(fac => {
-      el.innerHTML += `<option value="${fac.id}">${fac.name}</option>`;
-    });
+    if (Array.isArray(allFaculties)) {
+      allFaculties.forEach(fac => {
+        el.innerHTML += `<option value="${fac.id}">${fac.name}</option>`;
+      });
+    }
   });
 
   // Populate direction dropdown in Club modal
   const clubDirSelect = document.getElementById('clubFormDirectionId');
   if (clubDirSelect) {
     clubDirSelect.innerHTML = '<option value="">Yo\'nalishni tanlang</option>';
-    allDirections.forEach(dir => {
-      clubDirSelect.innerHTML += `<option value="${dir.id}">${dir.faculty_name ? dir.faculty_name + ' -> ' : ''}${dir.name}</option>`;
-    });
+    if (Array.isArray(allDirections)) {
+      allDirections.forEach(dir => {
+        clubDirSelect.innerHTML += `<option value="${dir.id}">${dir.faculty_name ? dir.faculty_name + ' -> ' : ''}${dir.name}</option>`;
+      });
+    }
   }
 }
 
 // 1. DASHBOARD
 async function loadDashboardStats() {
   try {
-    const res = await fetch('/api/v1/stats/overview');
+    const res = await apiFetch('/api/v1/stats/overview');
     const data = await res.json();
 
-    document.getElementById('kpiStudents').innerText = data.students_count;
-    document.getElementById('kpiClubs').innerText = data.clubs_count;
-    document.getElementById('kpiFaculties').innerText = data.faculties_count;
-    document.getElementById('kpiDirections').innerText = data.directions_count;
+    document.getElementById('kpiStudents').innerText = data.students_count || 0;
+    document.getElementById('kpiClubs').innerText = data.clubs_count || 0;
+    document.getElementById('kpiFaculties').innerText = data.faculties_count || 0;
+    document.getElementById('kpiDirections').innerText = data.directions_count || 0;
 
     // Top clubs
     const topClubsList = document.getElementById('topClubsList');
-    if (data.top_clubs.length === 0) {
+    if (!data.top_clubs || data.top_clubs.length === 0) {
       topClubsList.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Hozircha a\'zo bo\'lgan talabalar yo\'q.</p>';
     } else {
       topClubsList.innerHTML = data.top_clubs.map(c => `
@@ -160,7 +194,7 @@ async function loadDashboardStats() {
 
     // Faculty breakdown
     const facList = document.getElementById('facultyBreakdownList');
-    if (data.faculty_breakdown.length === 0) {
+    if (!data.faculty_breakdown || data.faculty_breakdown.length === 0) {
       facList.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Ma\'lumotlar mavjud emas.</p>';
     } else {
       facList.innerHTML = data.faculty_breakdown.map(f => `
@@ -176,16 +210,15 @@ async function loadDashboardStats() {
 }
 
 // 2. CLUBS MANAGEMENT
-let currentClubs = [];
-
 async function loadClubs() {
   const facId = document.getElementById('clubFilterFaculty').value;
   let url = '/api/v1/clubs';
   if (facId) url += `?faculty_id=${facId}`;
 
   try {
-    const res = await fetch(url);
-    currentClubs = await res.json();
+    const res = await apiFetch(url);
+    const data = await res.json();
+    currentClubs = Array.isArray(data) ? data : [];
     document.getElementById('clubsCountBadge').innerText = `${currentClubs.length} ta to'garak`;
 
     const grid = document.getElementById('clubsGrid');
@@ -267,7 +300,7 @@ function editClub(id) {
 async function deleteClub(id) {
   if (!confirm('Haqiqatdan ham ushbu to\'garakni o\'chirmoqchimisiz? Undagi talabalar a\'zoligi ham bekor qilinadi.')) return;
   try {
-    const res = await fetch(`/api/v1/clubs/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/v1/clubs/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
     showToast('To\'garak muvaffaqiyatli o\'chirildi');
     await loadClubs();
@@ -295,7 +328,7 @@ async function fetchStudents() {
   document.getElementById('btnExportCsv').href = `/api/v1/export/csv?${params.toString()}`;
 
   try {
-    const res = await fetch(`/api/v1/registrations?${params.toString()}`);
+    const res = await apiFetch(`/api/v1/registrations?${params.toString()}`);
     const data = await res.json();
 
     const tbody = document.getElementById('studentsTableBody');
@@ -355,7 +388,7 @@ function onStudentFacultyChange() {
 async function deleteRegistration(id) {
   if (!confirm('Ushbu talabaning to\'garakka a\'zoligini bekor qilmoqchimisiz?')) return;
   try {
-    const res = await fetch(`/api/v1/registrations/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/v1/registrations/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
     showToast('Talaba to\'garakdan muvaffaqiyatli chiqarildi');
     await fetchStudents();
@@ -425,7 +458,7 @@ function editFaculty(id) {
 async function deleteFaculty(id) {
   if (!confirm('Fakultetni o\'chirmoqchimisiz? Unga tegishli yo\'nalishlar va to\'garaklar ham o\'chiriladi.')) return;
   try {
-    const res = await fetch(`/api/v1/faculties/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/v1/faculties/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
     showToast('Fakultet o\'chirildi');
     await loadAcademicTables();
@@ -464,12 +497,56 @@ function editDirection(id) {
 async function deleteDirection(id) {
   if (!confirm('Yo\'nalishni o\'chirmoqchimisiz?')) return;
   try {
-    const res = await fetch(`/api/v1/directions/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/v1/directions/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
     showToast('Yo\'nalish o\'chirildi');
     await loadAcademicTables();
   } catch (err) {
     showToast('Yo\'nalishni o\'chirishda xatolik yuz berdi', 'error');
+  }
+}
+
+// Load Channel Setting
+async function loadChannelSettings() {
+  try {
+    const res = await apiFetch('/api/v1/settings/channel');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.channel_id) {
+        document.getElementById('telegramChannelInput').value = data.channel_id;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load channel setting:', err);
+  }
+}
+
+async function sendTestChannelPing() {
+  const channelInput = document.getElementById('telegramChannelInput');
+  const channelId = channelInput.value.trim();
+  if (!channelId) {
+    showToast('Iltimos avval kanal username yoki ID sini kiriting', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnTestChannel');
+  btn.disabled = true;
+  btn.innerText = 'Yuborilmoqda...';
+
+  try {
+    const res = await apiFetch('/api/v1/settings/test-channel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: channelId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Xabar yuborishda xatolik');
+    showToast(data.message, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '🔔 Sinov xabari yuborish';
   }
 }
 
@@ -495,7 +572,7 @@ function setupForms() {
     try {
       const url = id ? `/api/v1/clubs/${id}` : '/api/v1/clubs';
       const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -527,7 +604,7 @@ function setupForms() {
     try {
       const url = id ? `/api/v1/faculties/${id}` : '/api/v1/faculties';
       const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -556,7 +633,7 @@ function setupForms() {
     try {
       const url = id ? `/api/v1/directions/${id}` : '/api/v1/directions';
       const method = id ? 'PUT' : 'POST';
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -571,52 +648,6 @@ function setupForms() {
     }
   });
 
-// Load Channel Setting
-async function loadChannelSettings() {
-  try {
-    const res = await fetch('/api/v1/settings/channel');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.channel_id) {
-        document.getElementById('telegramChannelInput').value = data.channel_id;
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load channel setting:', err);
-  }
-}
-
-async function sendTestChannelPing() {
-  const channelInput = document.getElementById('telegramChannelInput');
-  const channelId = channelInput.value.trim();
-  if (!channelId) {
-    showToast('Iltimos avval kanal username yoki ID sini kiriting', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('btnTestChannel');
-  btn.disabled = true;
-  btn.innerText = 'Yuborilmoqda...';
-
-  try {
-    const res = await fetch('/api/v1/settings/test-channel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channel_id: channelId })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Xabar yuborishda xatolik');
-    showToast(data.message, 'success');
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerText = '🔔 Sinov xabari yuborish';
-  }
-}
-
-// Setup Form Submit Listeners
-function setupForms() {
   // Telegram Channel Save Submit
   document.getElementById('telegramChannelForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -624,7 +655,7 @@ function setupForms() {
     if (!channelId) return;
 
     try {
-      const res = await fetch('/api/v1/settings/channel', {
+      const res = await apiFetch('/api/v1/settings/channel', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel_id: channelId })
@@ -647,7 +678,7 @@ function setupForms() {
     }
 
     try {
-      const res = await fetch('/api/v1/auth/telegram-chat-id', {
+      const res = await apiFetch('/api/v1/auth/telegram-chat-id', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ telegram_chat_id: chatId })
@@ -678,7 +709,7 @@ function setupForms() {
     }
 
     try {
-      const res = await fetch('/api/v1/auth/change-password', {
+      const res = await apiFetch('/api/v1/auth/change-password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

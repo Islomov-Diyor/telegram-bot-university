@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
         bot_task = asyncio.create_task(dp.start_polling(bot, handle_signals=False))
     else:
         logger.warning(
-            "⚠️ Telegram BOT_TOKEN is not configured or is default. "
+            "[WARNING] Telegram BOT_TOKEN is not configured or is default. "
             "Bot polling skipped. Admin Web Panel is running normally at http://localhost:8000"
         )
 
@@ -103,8 +103,9 @@ async def render_login(request: Request):
 
 @app.get("/admin", response_class=HTMLResponse)
 async def render_admin(request: Request):
+    from src.core.security import decode_access_token
     token = request.cookies.get("access_token")
-    if not token:
+    if not token or not decode_access_token(token):
         return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="index.html")
 
