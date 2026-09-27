@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: university-bot-web
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: "sqlite+aiosqlite:///./data/university_clubs.db"
