@@ -7,6 +7,8 @@ services:
     plan: free
     autoDeploy: true
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: BOT_TOKEN
         sync: false
       - key: SECRET_KEY
