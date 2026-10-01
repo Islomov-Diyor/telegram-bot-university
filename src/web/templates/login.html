@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kirish | Universitet Iqtidorli Talabalar Tizimi</title>
+  <title data-i18n="login_page_title">Kirish | Universitet Iqtidorli Talabalar Tizimi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script src="/static/js/i18n.js"></script>
   <style>
     .login-container {
       min-height: 100vh;
@@ -19,15 +20,15 @@
     .login-card {
       width: 100%;
       max-width: 440px;
-      padding: 40px;
+      padding: 36px 40px;
       position: relative;
     }
     .login-brand {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
     .login-brand .brand-icon {
-      margin: 0 auto 16px auto;
+      margin: 0 auto 14px auto;
       width: 56px;
       height: 56px;
       font-size: 26px;
@@ -57,17 +58,24 @@
 <body>
   <div class="login-container">
     <div class="glass-panel login-card">
+      <!-- Language Switcher -->
+      <div class="login-lang-switch">
+        <button type="button" class="lang-pill" data-lang="uz" onclick="setLanguage('uz')">🇺🇿 O'zbek</button>
+        <button type="button" class="lang-pill" data-lang="ru" onclick="setLanguage('ru')">🇷🇺 Рус</button>
+        <button type="button" class="lang-pill" data-lang="en" onclick="setLanguage('en')">🇬🇧 Eng</button>
+      </div>
+
       <div class="login-brand">
         <div class="brand-icon">🎓</div>
-        <h1>Iqtidorli Talabalar Tizimi</h1>
-        <p>Universitet Administrator Paneli</p>
+        <h1 data-i18n="login_brand_title">Iqtidorli Talabalar Tizimi</h1>
+        <p data-i18n="login_brand_subtitle">Universitet Administrator Paneli</p>
       </div>
 
       <div id="errorAlert" class="alert-box"></div>
 
       <form id="loginForm">
         <div class="form-group">
-          <label class="form-label" for="username">Administrator Logini</label>
+          <label class="form-label" for="username" data-i18n="login_username_label">Administrator Logini</label>
           <input 
             type="text" 
             id="username" 
@@ -80,7 +88,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">Maxfiy Parol</label>
+          <label class="form-label" for="password" data-i18n="login_password_label">Maxfiy Parol</label>
           <input 
             type="password" 
             id="password" 
@@ -93,7 +101,7 @@
         </div>
 
         <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
-          <span>Tizimga kirish</span>
+          <span data-i18n="login_submit_btn">Tizimga kirish</span>
         </button>
       </form>
     </div>
@@ -108,7 +116,7 @@
       e.preventDefault();
       errorAlert.style.display = 'none';
       submitBtn.disabled = true;
-      submitBtn.innerText = 'Kirilmoqda...';
+      submitBtn.innerText = typeof t === 'function' ? t('logging_in') : 'Kirilmoqda...';
 
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
@@ -123,10 +131,11 @@
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.detail || 'Kirishda xatolik yuz berdi.');
+          const errMsg = data.detail === 'Invalid credentials' ? t('login_error_invalid') : (data.detail || t('login_error_generic'));
+          throw new Error(errMsg);
         }
 
-        // Store token in localStorage as backup
+        // Store token in localStorage
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('admin_user', JSON.stringify(data.admin));
 
@@ -135,7 +144,7 @@
         errorAlert.innerText = err.message;
         errorAlert.style.display = 'block';
         submitBtn.disabled = false;
-        submitBtn.innerText = 'Tizimga kirish';
+        submitBtn.innerText = typeof t === 'function' ? t('login_submit_btn') : 'Tizimga kirish';
       }
     });
   </script>

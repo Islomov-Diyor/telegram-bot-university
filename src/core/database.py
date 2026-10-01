@@ -62,5 +62,11 @@ async def create_tables():
                 if "queue_position" not in columns:
                     sync_conn.execute(text("ALTER TABLE registrations ADD COLUMN queue_position INTEGER NULL"))
 
+            # 3. students table: language
+            if "students" in inspector.get_table_names():
+                columns = [c["name"] for c in inspector.get_columns("students")]
+                if "language" not in columns:
+                    sync_conn.execute(text("ALTER TABLE students ADD COLUMN language VARCHAR(10) DEFAULT 'uz'"))
+
         await conn.run_sync(run_lightweight_migrations)
 

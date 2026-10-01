@@ -14,8 +14,9 @@ class Student(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
     username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    phone_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    full_name: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    phone_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    language: Mapped[str] = mapped_column(String(10), default="uz", server_default="uz", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

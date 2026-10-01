@@ -21,11 +21,11 @@ async function apiFetch(url, options = {}) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('admin_user');
       window.location.href = '/login';
-      throw new Error('Autentifikatsiyadan o\'tilmagan.');
+      throw new Error('Not authenticated.');
     }
     return response;
   } catch (err) {
-    if (err.message === 'Autentifikatsiyadan o\'tilmagan.') {
+    if (err.message === 'Not authenticated.') {
       window.location.href = '/login';
     }
     throw err;
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   await loadInitialData();
 
-  // Restore active tab from URL hash or localStorage so refresh never loses state!
+  // Restore active tab from URL hash or localStorage
   const hashTab = window.location.hash.replace('#', '');
   const savedTab = hashTab || localStorage.getItem('admin_active_tab') || 'dashboard';
   await switchTab(savedTab);
@@ -66,6 +66,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(refreshCurrentTabSilent, 12000);
 });
+
+// React to language switch
+window.onLanguageChanged = async (lang) => {
+  populateFacultyDropdowns();
+  populateStudentClubDropdown();
+  if (currentActiveTab === 'dashboard') {
+    await loadDashboardStats();
+  } else if (currentActiveTab === 'clubs') {
+    await loadClubs();
+  } else if (currentActiveTab === 'students') {
+    await fetchStudents();
+  } else if (currentActiveTab === 'academic') {
+    await loadAcademicTables();
+  }
+};
 
 // Auth Verification
 async function checkAuth() {
@@ -88,7 +103,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   try {
     await apiFetch('/api/v1/auth/logout', { method: 'POST' });
   } finally {
-    localStorage.clear();
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('admin_user');
     window.location.href = '/login';
   }
 });
@@ -154,9 +170,9 @@ async function manualRefresh() {
 
   try {
     await switchTab(currentActiveTab);
-    showToast('Ma\'lumotlar muvaffaqiyatli yangilandi!', 'success');
+    showToast(t('toast_data_refreshed'), 'success');
   } catch (err) {
-    showToast('Yangilashda xatolik yuz berdi', 'error');
+    showToast(t('toast_refresh_error'), 'error');
   } finally {
     if (icon) {
       setTimeout(() => { icon.style.animation = 'none'; }, 600);
@@ -170,7 +186,6 @@ async function refreshCurrentTabSilent() {
     if (currentActiveTab === 'dashboard') {
       await loadDashboardStats();
     } else if (currentActiveTab === 'students') {
-      // Only refresh if student search input is not currently focused by user
       const searchInput = document.getElementById('studentSearchInput');
       if (document.activeElement !== searchInput) {
         await fetchStudents();
@@ -181,7 +196,7 @@ async function refreshCurrentTabSilent() {
   }
 }
 
-// Initial Common Data (Faculties, Directions & Clubs)
+// Initial Common Data
 async function loadInitialData() {
   try {
     const [facRes, dirRes, clubsRes] = await Promise.all([
@@ -211,7 +226,8 @@ function populateFacultyDropdowns() {
     const el = document.getElementById(id);
     if (!el) return;
     const isFilter = id.includes('Filter');
-    el.innerHTML = isFilter ? '<option value="">Barcha fakultetlar</option>' : '<option value="">Fakultetni tanlang</option>';
+    const defaultText = isFilter ? t('filter_all_faculties') : t('filter_select_faculty');
+    el.innerHTML = `<option value="">${defaultText}</option>`;
     if (Array.isArray(allFaculties)) {
       allFaculties.forEach(fac => {
         el.innerHTML += `<option value="${fac.id}">${fac.name}</option>`;
@@ -222,7 +238,7 @@ function populateFacultyDropdowns() {
   // Populate direction dropdown in Club modal
   const clubDirSelect = document.getElementById('clubFormDirectionId');
   if (clubDirSelect) {
-    clubDirSelect.innerHTML = '<option value="">Yo\'nalishni tanlang</option>';
+    clubDirSelect.innerHTML = `<option value="">${t('filter_select_direction')}</option>`;
     if (Array.isArray(allDirections)) {
       allDirections.forEach(dir => {
         clubDirSelect.innerHTML += `<option value="${dir.id}">${dir.faculty_name ? dir.faculty_name + ' -> ' : ''}${dir.name}</option>`;
@@ -235,7 +251,7 @@ function populateStudentClubDropdown() {
   const clubSelect = document.getElementById('studentFilterClub');
   if (!clubSelect) return;
   const currentVal = clubSelect.value;
-  clubSelect.innerHTML = '<option value="">Barcha to\'garaklar</option>';
+  clubSelect.innerHTML = `<option value="">${t('filter_all_clubs')}</option>`;
   if (Array.isArray(currentClubs)) {
     currentClubs.forEach(c => {
       clubSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
@@ -261,12 +277,12 @@ async function loadDashboardStats() {
     // Top clubs
     const topClubsList = document.getElementById('topClubsList');
     if (!data.top_clubs || data.top_clubs.length === 0) {
-      topClubsList.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Hozircha a\'zo bo\'lgan talabalar yo\'q.</p>';
+      topClubsList.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">${t('no_members_yet')}</p>`;
     } else {
       topClubsList.innerHTML = data.top_clubs.map(c => `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(11, 15, 25, 0.4); border-radius: var(--radius-md);">
           <span style="font-size: 13px; font-weight: 500;">🎯 ${c.name}</span>
-          <span class="badge badge-indigo">${c.count} nafar talaba</span>
+          <span class="badge badge-indigo">${c.count} ${t('students_count_suffix')}</span>
         </div>
       `).join('');
     }
@@ -274,17 +290,16 @@ async function loadDashboardStats() {
     // Faculty breakdown
     const facList = document.getElementById('facultyBreakdownList');
     if (!data.faculty_breakdown || data.faculty_breakdown.length === 0) {
-      facList.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Ma\'lumotlar mavjud emas.</p>';
+      facList.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">${t('no_data')}</p>`;
     } else {
       facList.innerHTML = data.faculty_breakdown.map(f => `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(11, 15, 25, 0.4); border-radius: var(--radius-md);">
           <span style="font-size: 13px; font-weight: 500;">🏛 ${f.name}</span>
-          <span class="badge badge-emerald">${f.count} nafar</span>
+          <span class="badge badge-emerald">${f.count} ${t('people_suffix')}</span>
         </div>
       `).join('');
     }
 
-    // Load recent registrations for dashboard table
     await loadRecentRegistrations();
   } catch (err) {
     console.error('Error loading dashboard stats:', err);
@@ -300,15 +315,15 @@ async function loadRecentRegistrations() {
     const items = await res.json();
 
     if (!Array.isArray(items) || items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Hozircha ro\'yxatdan o\'tgan talabalar yo\'q.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">${t('no_recent_students')}</td></tr>`;
       return;
     }
 
     tbody.innerHTML = items.map((item, idx) => {
-      const regDate = item.registered_at ? new Date(item.registered_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+      const regDate = item.registered_at ? new Date(item.registered_at).toLocaleDateString(getCurrentLanguage() === 'en' ? 'en-US' : 'uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
       const statusBadge = item.status === 'active'
-        ? '<span class="badge badge-emerald">✅ Asosiy a\'zo</span>'
-        : `<span class="badge badge-amber">⏳ Navbatda (#${item.queue_position || 1})</span>`;
+        ? `<span class="badge badge-emerald">${t('status_active')}</span>`
+        : `<span class="badge badge-amber">${t('status_waiting', { pos: item.queue_position || 1 })}</span>`;
 
       return `
         <tr>
@@ -316,7 +331,7 @@ async function loadRecentRegistrations() {
           <td><b>${item.full_name}</b></td>
           <td><span class="badge badge-indigo">${item.club_name}</span></td>
           <td style="font-size: 12px;">${item.faculty_name}</td>
-          <td><span class="badge badge-indigo">${item.course_level}-kurs</span></td>
+          <td><span class="badge badge-indigo">${item.course_level}-${t('th_course')}</span></td>
           <td>${statusBadge}</td>
           <td><a href="tel:${item.phone_number}" style="color: var(--text-primary); text-decoration: none;">${item.phone_number}</a></td>
           <td style="font-size: 11px; color: var(--text-secondary);">${regDate}</td>
@@ -338,13 +353,13 @@ async function loadClubs() {
     const res = await apiFetch(url);
     const data = await res.json();
     currentClubs = Array.isArray(data) ? data : [];
-    document.getElementById('clubsCountBadge').innerText = `${currentClubs.length} ta to'garak`;
+    document.getElementById('clubsCountBadge').innerText = t('clubs_count_suffix', { count: currentClubs.length });
 
     populateStudentClubDropdown();
 
     const grid = document.getElementById('clubsGrid');
     if (currentClubs.length === 0) {
-      grid.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">To\'garaklar topilmadi.</p>';
+      grid.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; grid-column: 1/-1;">${t('no_clubs_found')}</p>`;
       return;
     }
 
@@ -353,23 +368,23 @@ async function loadClubs() {
       let capacityBadge = '';
       if (c.max_capacity > 0) {
         if (c.is_full) {
-          capacityBadge = `<span class="badge badge-amber">🔒 To'lgan (${c.students_count}/${c.max_capacity} nafar | Navbatda: ${c.waiting_students_count || 0})</span>`;
+          capacityBadge = `<span class="badge badge-amber">${t('status_full', { cur: c.students_count, max: c.max_capacity, wait: c.waiting_students_count || 0 })}</span>`;
         } else {
-          capacityBadge = `<span class="badge badge-emerald">👥 ${c.students_count}/${c.max_capacity} nafar a'zo</span>`;
+          capacityBadge = `<span class="badge badge-emerald">${t('status_spots', { cur: c.students_count, max: c.max_capacity })}</span>`;
         }
       } else {
-        capacityBadge = `<span class="badge badge-emerald">👥 ${c.students_count} nafar a'zo</span>`;
+        capacityBadge = `<span class="badge badge-emerald">${t('status_unlimited', { cur: c.students_count })}</span>`;
       }
 
       // Deadline badge
       let deadlineBadge = '';
       if (c.registration_deadline) {
         const dl = new Date(c.registration_deadline);
-        const dlFormatted = dl.toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const dlFormatted = dl.toLocaleDateString(getCurrentLanguage() === 'en' ? 'en-US' : 'uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         if (c.is_deadline_passed) {
-          deadlineBadge = `<span class="badge badge-rose">⛔ Muddat tugagan (${dlFormatted})</span>`;
+          deadlineBadge = `<span class="badge badge-rose">${t('status_deadline_passed', { date: dlFormatted })}</span>`;
         } else {
-          deadlineBadge = `<span class="badge badge-indigo">⏳ Muddat: ${dlFormatted}</span>`;
+          deadlineBadge = `<span class="badge badge-indigo">${t('status_deadline_open', { date: dlFormatted })}</span>`;
         }
       }
 
@@ -384,27 +399,26 @@ async function loadClubs() {
             <h3 class="club-title">${c.name}</h3>
             <p class="club-desc">${c.description}</p>
             <div class="club-meta-list">
-              <div class="club-meta-item"><span>📚</span> <span><b>Yo'nalish:</b> ${c.direction_name || '-'}</span></div>
-              <div class="club-meta-item"><span>🗓</span> <span><b>Kunlar:</b> ${c.schedule_days}</span></div>
-              <div class="club-meta-item"><span>⏰</span> <span><b>Vaqt:</b> ${c.schedule_time}</span></div>
-              <div class="club-meta-item"><span>📍</span> <span><b>Xona:</b> ${c.room_location}</span></div>
-              <div class="club-meta-item"><span>👨‍🏫</span> <span><b>Rahbar:</b> ${c.leader_name}</span></div>
-              <div class="club-meta-item"><span>📞</span> <span><b>Aloqa:</b> ${c.leader_contact}</span></div>
+              <div class="club-meta-item"><span>📚</span> <span><b>${t('th_direction')}:</b> ${c.direction_name || '-'}</span></div>
+              <div class="club-meta-item"><span>🗓</span> <span><b>${t('th_schedule')}:</b> ${c.schedule_days} (${c.schedule_time})</span></div>
+              <div class="club-meta-item"><span>📍</span> <span><b>${t('form_club_room')}:</b> ${c.room_location}</span></div>
+              <div class="club-meta-item"><span>👨‍🏫</span> <span><b>${t('form_club_leader')}:</b> ${c.leader_name}</span></div>
+              <div class="club-meta-item"><span>📞</span> <span><b>${t('form_club_contact')}:</b> ${c.leader_contact}</span></div>
             </div>
           </div>
           <div class="club-footer">
             <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="editClub(${c.id})">
-              ✏️ Tahrirlash
+              ✏️ ${t('edit')}
             </button>
             <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteClub(${c.id})">
-              🗑 O'chirish
+              🗑 ${t('delete')}
             </button>
           </div>
         </div>
       `;
     }).join('');
   } catch (err) {
-    showToast('To\'garaklarni yuklashda xatolik yuz berdi', 'error');
+    showToast(t('toast_refresh_error'), 'error');
   }
 }
 
@@ -418,7 +432,7 @@ function openClubModal(clubData = null) {
   form.reset();
 
   if (clubData) {
-    document.getElementById('clubModalTitle').innerText = 'To\'garakni tahrirlash';
+    document.getElementById('clubModalTitle').innerText = t('modal_edit_club');
     document.getElementById('clubFormId').value = clubData.id;
     document.getElementById('clubFormDirectionId').value = clubData.direction_id;
     document.getElementById('clubFormName').value = clubData.name;
@@ -442,7 +456,7 @@ function openClubModal(clubData = null) {
       document.getElementById('clubFormDeadline').value = '';
     }
   } else {
-    document.getElementById('clubModalTitle').innerText = 'Yangi to\'garak ochish';
+    document.getElementById('clubModalTitle').innerText = t('modal_add_club');
     document.getElementById('clubFormId').value = '';
     document.getElementById('clubFormMaxCapacity').value = 20;
     document.getElementById('clubFormDeadline').value = '';
@@ -461,15 +475,15 @@ function editClub(id) {
 }
 
 async function deleteClub(id) {
-  if (!confirm('Haqiqatdan ham ushbu to\'garakni o\'chirmoqchimisiz? Undagi talabalar a\'zoligi ham bekor qilinadi.')) return;
+  if (!confirm(t('confirm_delete_club'))) return;
   try {
     const res = await apiFetch(`/api/v1/clubs/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
-    showToast('To\'garak muvaffaqiyatli o\'chirildi');
+    showToast(t('toast_club_deleted'), 'success');
     await loadClubs();
     await loadInitialData();
   } catch (err) {
-    showToast('To\'garakni o\'chirishda xatolik yuz berdi', 'error');
+    showToast(t('toast_refresh_error'), 'error');
   }
 }
 
@@ -489,7 +503,6 @@ async function fetchStudents() {
   if (statusVal) params.append('status', statusVal);
   if (search) params.append('search', search);
 
-  // Update export links dynamically with query params
   document.getElementById('btnExportExcel').href = `/api/v1/export/excel?${params.toString()}`;
   document.getElementById('btnExportCsv').href = `/api/v1/export/csv?${params.toString()}`;
 
@@ -499,17 +512,17 @@ async function fetchStudents() {
 
     const tbody = document.getElementById('studentsTableBody');
     if (!data.items || data.items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 32px;">A\'zo bo\'lgan yoki navbatdagi talabalar topilmadi.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 32px;">${t('no_students_found')}</td></tr>`;
       return;
     }
 
     tbody.innerHTML = data.items.map((item, idx) => {
-      const regDate = item.registered_at ? new Date(item.registered_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+      const regDate = item.registered_at ? new Date(item.registered_at).toLocaleDateString(getCurrentLanguage() === 'en' ? 'en-US' : 'uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
       const tgText = item.telegram_username ? `<a href="https://t.me/${item.telegram_username}" target="_blank" style="color: #818CF8; text-decoration: none;">@${item.telegram_username}</a>` : '<span style="color: var(--text-muted);">-</span>';
 
       const statusBadge = item.status === 'active'
-        ? '<span class="badge badge-emerald">✅ Asosiy a\'zo</span>'
-        : `<span class="badge badge-amber">⏳ Navbatda (#${item.queue_position || 1})</span>`;
+        ? `<span class="badge badge-emerald">${t('status_active')}</span>`
+        : `<span class="badge badge-amber">${t('status_waiting', { pos: item.queue_position || 1 })}</span>`;
 
       return `
         <tr>
@@ -518,21 +531,21 @@ async function fetchStudents() {
           <td>${item.faculty_name}</td>
           <td>${item.direction_name}</td>
           <td><span class="badge badge-indigo">${item.club_name}</span></td>
-          <td><span class="badge badge-emerald">${item.course_level}-kurs</span></td>
+          <td><span class="badge badge-emerald">${item.course_level}-${t('th_course')}</span></td>
           <td>${statusBadge}</td>
           <td><a href="tel:${item.phone_number}" style="color: var(--text-primary); text-decoration: none;">${item.phone_number}</a></td>
           <td>${tgText}</td>
           <td style="font-size: 11px; color: var(--text-secondary);">${regDate}</td>
           <td>
             <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteRegistration(${item.id})">
-              Bekor qilish
+              ${t('cancel_reg')}
             </button>
           </td>
         </tr>
       `;
     }).join('');
   } catch (err) {
-    showToast('Talabalar ro\'yxatini yuklashda xatolik yuz berdi', 'error');
+    showToast(t('toast_refresh_error'), 'error');
   }
 }
 
@@ -546,7 +559,7 @@ function debounceStudentSearch() {
 function onStudentFacultyChange() {
   const facId = document.getElementById('studentFilterFaculty').value;
   const clubSelect = document.getElementById('studentFilterClub');
-  clubSelect.innerHTML = '<option value="">Barcha to\'garaklar</option>';
+  clubSelect.innerHTML = `<option value="">${t('filter_all_clubs')}</option>`;
 
   const filtered = facId ? currentClubs.filter(c => c.faculty_id == facId) : currentClubs;
   filtered.forEach(c => {
@@ -557,17 +570,17 @@ function onStudentFacultyChange() {
 }
 
 async function deleteRegistration(id) {
-  if (!confirm('Ushbu talabaning to\'garakka a\'zoligini bekor qilmoqchimisiz? Agar navbatda talaba bo\'lsa, u avtomatik asosiy a\'zolikka qabul qilinadi va unga bot orqali xabar yuboriladi.')) return;
+  if (!confirm(t('confirm_cancel_reg'))) return;
   try {
     const res = await apiFetch(`/api/v1/registrations/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Xatolik yuz berdi');
 
-    showToast(data.message || 'Talaba a\'zoligi muvaffaqiyatli bekor qilindi', 'success');
+    showToast(data.message || 'Muvaffaqiyatli bekor qilindi', 'success');
     await fetchStudents();
     await loadDashboardStats();
   } catch (err) {
-    showToast(err.message || 'A\'zolikni bekor qilishda xatolik yuz berdi', 'error');
+    showToast(err.message || 'Xatolik yuz berdi', 'error');
   }
 }
 
@@ -580,10 +593,10 @@ async function loadAcademicTables() {
   facBody.innerHTML = allFaculties.map(f => `
     <tr>
       <td><b>${f.name}</b> <span style="font-size: 11px; color: var(--text-muted);">${f.code || ''}</span></td>
-      <td><span class="badge badge-indigo">${f.directions_count || 0} ta yo'nalish</span></td>
+      <td><span class="badge badge-indigo">${t('directions_count_badge', { count: f.directions_count || 0 })}</span></td>
       <td>
-        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="editFaculty(${f.id})">Tahrirlash</button>
-        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteFaculty(${f.id})">O'chirish</button>
+        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="editFaculty(${f.id})">${t('edit')}</button>
+        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteFaculty(${f.id})">${t('delete')}</button>
       </td>
     </tr>
   `).join('');
@@ -594,10 +607,10 @@ async function loadAcademicTables() {
     <tr>
       <td><b>${d.name}</b> <span style="font-size: 11px; color: var(--text-muted);">${d.code || ''}</span></td>
       <td><span style="font-size: 12px; color: var(--text-secondary);">${d.faculty_name}</span></td>
-      <td><span class="badge badge-emerald">${d.clubs_count || 0} ta to'garak</span></td>
+      <td><span class="badge badge-emerald">${t('clubs_count_suffix', { count: d.clubs_count || 0 })}</span></td>
       <td>
-        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="editDirection(${d.id})">Tahrirlash</button>
-        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteDirection(${d.id})">O'chirish</button>
+        <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="editDirection(${d.id})">${t('edit')}</button>
+        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteDirection(${d.id})">${t('delete')}</button>
       </td>
     </tr>
   `).join('');
@@ -609,12 +622,12 @@ function openFacultyModal(fac = null) {
   const form = document.getElementById('facultyForm');
   form.reset();
   if (fac) {
-    document.getElementById('facultyModalTitle').innerText = 'Fakultetni tahrirlash';
+    document.getElementById('facultyModalTitle').innerText = t('modal_edit_faculty');
     document.getElementById('facultyFormId').value = fac.id;
     document.getElementById('facultyFormName').value = fac.name;
     document.getElementById('facultyFormCode').value = fac.code || '';
   } else {
-    document.getElementById('facultyModalTitle').innerText = 'Fakultet qo\'shish';
+    document.getElementById('facultyModalTitle').innerText = t('modal_add_faculty');
     document.getElementById('facultyFormId').value = '';
   }
   modal.classList.add('show');
@@ -630,14 +643,14 @@ function editFaculty(id) {
 }
 
 async function deleteFaculty(id) {
-  if (!confirm('Fakultetni o\'chirmoqchimisiz? Unga tegishli yo\'nalishlar va to\'garaklar ham o\'chiriladi.')) return;
+  if (!confirm(t('confirm_delete_faculty'))) return;
   try {
     const res = await apiFetch(`/api/v1/faculties/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
-    showToast('Fakultet o\'chirildi');
+    showToast(t('toast_faculty_deleted'), 'success');
     await loadAcademicTables();
   } catch (err) {
-    showToast('Fakultetni o\'chirishda xatolik yuz berdi', 'error');
+    showToast(t('toast_refresh_error'), 'error');
   }
 }
 
@@ -647,13 +660,13 @@ function openDirectionModal(dir = null) {
   const form = document.getElementById('directionForm');
   form.reset();
   if (dir) {
-    document.getElementById('directionModalTitle').innerText = 'Yo\'nalishni tahrirlash';
+    document.getElementById('directionModalTitle').innerText = t('modal_edit_direction');
     document.getElementById('directionFormId').value = dir.id;
     document.getElementById('directionFormFacultyId').value = dir.faculty_id;
     document.getElementById('directionFormName').value = dir.name;
     document.getElementById('directionFormCode').value = dir.code || '';
   } else {
-    document.getElementById('directionModalTitle').innerText = 'Yo\'nalish qo\'shish';
+    document.getElementById('directionModalTitle').innerText = t('modal_add_direction');
     document.getElementById('directionFormId').value = '';
   }
   modal.classList.add('show');
@@ -669,14 +682,14 @@ function editDirection(id) {
 }
 
 async function deleteDirection(id) {
-  if (!confirm('Yo\'nalishni o\'chirmoqchimisiz?')) return;
+  if (!confirm(t('confirm_delete_direction'))) return;
   try {
     const res = await apiFetch(`/api/v1/directions/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
-    showToast('Yo\'nalish o\'chirildi');
+    showToast(t('toast_direction_deleted'), 'success');
     await loadAcademicTables();
   } catch (err) {
-    showToast('Yo\'nalishni o\'chirishda xatolik yuz berdi', 'error');
+    showToast(t('toast_refresh_error'), 'error');
   }
 }
 
@@ -699,13 +712,13 @@ async function sendTestChannelPing() {
   const channelInput = document.getElementById('telegramChannelInput');
   const channelId = channelInput.value.trim();
   if (!channelId) {
-    showToast('Iltimos avval kanal username yoki ID sini kiriting', 'error');
+    showToast('Iltimos kanal username yoki ID sini kiriting', 'error');
     return;
   }
 
   const btn = document.getElementById('btnTestChannel');
   btn.disabled = true;
-  btn.innerText = 'Yuborilmoqda...';
+  btn.innerText = '...';
 
   try {
     const res = await apiFetch('/api/v1/settings/test-channel', {
@@ -714,13 +727,13 @@ async function sendTestChannelPing() {
       body: JSON.stringify({ channel_id: channelId })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Xabar yuborishda xatolik');
+    if (!res.ok) throw new Error(data.detail || 'Xatolik');
     showToast(data.message, 'success');
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerText = '🔔 Sinov xabari yuborish';
+    btn.innerText = t('btn_test_ping');
   }
 }
 
@@ -761,7 +774,7 @@ function setupForms() {
         throw new Error(err.detail || 'Saqlashda xatolik');
       }
 
-      showToast(id ? 'To\'garak ma\'lumotlari yangilandi' : 'Yangi to\'garak yaratildi');
+      showToast(id ? t('toast_club_saved') : t('toast_club_created'), 'success');
       closeClubModal();
       await loadClubs();
     } catch (err) {
@@ -789,7 +802,7 @@ function setupForms() {
       });
 
       if (!res.ok) throw new Error('Saqlashda xatolik');
-      showToast('Fakultet saqlandi');
+      showToast(t('toast_faculty_saved'), 'success');
       closeFacultyModal();
       await loadAcademicTables();
     } catch (err) {
@@ -818,7 +831,7 @@ function setupForms() {
       });
 
       if (!res.ok) throw new Error('Saqlashda xatolik');
-      showToast('Yo\'nalish saqlandi');
+      showToast(t('toast_direction_saved'), 'success');
       closeDirectionModal();
       await loadAcademicTables();
     } catch (err) {
@@ -839,8 +852,8 @@ function setupForms() {
         body: JSON.stringify({ channel_id: channelId })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Saqlashda xatolik');
-      showToast('Boshqaruv kanali muvaffaqiyatli saqlandi!');
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      showToast(t('toast_channel_saved'), 'success');
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -862,10 +875,10 @@ function setupForms() {
         body: JSON.stringify({ telegram_chat_id: chatId })
       });
 
-      if (!res.ok) throw new Error('Saqlashda xatolik');
-      showToast('Telegram Chat ID muvaffaqiyatli saqlandi!');
+      if (!res.ok) throw new Error('Xatolik');
+      showToast(t('toast_chat_id_saved'), 'success');
     } catch (err) {
-      showToast('Saqlashda xatolik yuz berdi', 'error');
+      showToast(err.message, 'error');
     }
   });
 
@@ -877,12 +890,12 @@ function setupForms() {
     const confirmPassword = document.getElementById('confirmPasswordInput').value;
 
     if (newPassword !== confirmPassword) {
-      showToast('Yangi parollar bir-biriga mos kelmadi!', 'error');
+      showToast(t('toast_password_mismatch'), 'error');
       return;
     }
 
     if (newPassword.length < 8) {
-      showToast('Yangi parol kamida 8 ta belgidan iborat bo\'lishi kerak!', 'error');
+      showToast(t('toast_password_min_len'), 'error');
       return;
     }
 
@@ -899,7 +912,7 @@ function setupForms() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Parolni o\'zgartirishda xatolik');
 
-      showToast(data.message || 'Parol muvaffaqiyatli o\'zgartirildi!', 'success');
+      showToast(t('toast_password_changed'), 'success');
       document.getElementById('changePasswordForm').reset();
     } catch (err) {
       showToast(err.message, 'error');

@@ -13,6 +13,7 @@ from src.bot.keyboards.inline_user import (
     get_clubs_keyboard,
     get_club_detail_keyboard,
 )
+from src.bot.i18n import get_text, get_user_lang
 
 logger = logging.getLogger(__name__)
 router = Router(name="browse_router")
@@ -22,14 +23,12 @@ router = Router(name="browse_router")
 async def callback_back_to_faculties(callback: CallbackQuery, state: FSMContext):
     """Return to faculty selection menu."""
     async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
         faculty_repo = FacultyRepository(session)
         faculties = await faculty_repo.get_active_faculties()
 
-    text = (
-        "🏛 <b>Fakultetlar ro'yxati</b>\n\n"
-        "Quyidagi ro'yxatdan o'zingiz tahsil olayotgan fakultetni tanlang:"
-    )
-    await callback.message.edit_text(text=text, reply_markup=get_faculties_keyboard(faculties))
+    text = get_text("catalog_faculties_title", lang)
+    await callback.message.edit_text(text=text, reply_markup=get_faculties_keyboard(faculties, lang))
     await callback.answer()
 
 
@@ -39,12 +38,13 @@ async def callback_select_faculty(callback: CallbackQuery, state: FSMContext):
     faculty_id = int(callback.data.split(":")[1])
 
     async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
         faculty_repo = FacultyRepository(session)
         direction_repo = DirectionRepository(session)
 
         faculty = await faculty_repo.get_by_id(faculty_id)
         if not faculty:
-            await callback.answer("Fakultet topilmadi!", show_alert=True)
+            await callback.answer(get_text("faculty_not_found", lang), show_alert=True)
             return
 
         directions = await direction_repo.get_active_by_faculty(faculty_id)
@@ -53,22 +53,16 @@ async def callback_select_faculty(callback: CallbackQuery, state: FSMContext):
     await state.update_data(faculty_id=faculty.id, faculty_name=faculty.name)
 
     if not directions:
-        text = (
-            f"🏛 <b>{faculty.name}</b>\n\n"
-            "Ushbu fakultetda hozircha faol ta'lim yo'nalishlari mavjud emas."
-        )
-        builder_markup = get_directions_keyboard([], faculty_id)
+        text = get_text("no_directions", lang, faculty_name=faculty.name)
+        builder_markup = get_directions_keyboard([], faculty_id, lang)
         await callback.message.edit_text(text=text, reply_markup=builder_markup)
         await callback.answer()
         return
 
-    text = (
-        f"🏛 <b>Fakultet:</b> {faculty.name}\n\n"
-        "⬇️ <i>O'zingiz tahsil olayotgan ta'lim yo'nalishini tanlang:</i>"
-    )
+    text = get_text("select_direction_prompt", lang, faculty_name=faculty.name)
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_directions_keyboard(directions, faculty_id)
+        reply_markup=get_directions_keyboard(directions, faculty_id, lang)
     )
     await callback.answer()
 
@@ -79,19 +73,17 @@ async def callback_back_to_directions(callback: CallbackQuery, state: FSMContext
     faculty_id = int(callback.data.split(":")[1])
 
     async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
         faculty_repo = FacultyRepository(session)
         direction_repo = DirectionRepository(session)
         faculty = await faculty_repo.get_by_id(faculty_id)
         directions = await direction_repo.get_active_by_faculty(faculty_id)
 
     fac_name = faculty.name if faculty else ""
-    text = (
-        f"🏛 <b>Fakultet:</b> {fac_name}\n\n"
-        "⬇️ <i>O'zingiz tahsil olayotgan ta'lim yo'nalishini tanlang:</i>"
-    )
+    text = get_text("select_direction_prompt", lang, faculty_name=fac_name)
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_directions_keyboard(directions, faculty_id)
+        reply_markup=get_directions_keyboard(directions, faculty_id, lang)
     )
     await callback.answer()
 
@@ -102,40 +94,34 @@ async def callback_select_direction(callback: CallbackQuery, state: FSMContext):
     direction_id = int(callback.data.split(":")[1])
 
     async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
         direction_repo = DirectionRepository(session)
         club_repo = ClubRepository(session)
 
         direction = await direction_repo.get_by_id(direction_id)
         if not direction:
-            await callback.answer("Yo'nalish topilmadi!", show_alert=True)
+            await callback.answer(get_text("direction_not_found", lang), show_alert=True)
             return
 
         clubs = await club_repo.get_active_by_direction(direction_id)
 
-    # Save selected direction in FSM data for future auto-population
     await state.update_data(direction_id=direction.id, direction_name=direction.name)
     user_data = await state.get_data()
     faculty_id = user_data.get("faculty_id", direction.faculty_id)
 
     if not clubs:
-        text = (
-            f"📚 <b>Yo'nalish:</b> {direction.name}\n\n"
-            "Ushbu yo'nalish bo'yicha hozircha ochiq to'garaklar mavjud emas."
-        )
+        text = get_text("no_clubs", lang, direction_name=direction.name)
         await callback.message.edit_text(
             text=text,
-            reply_markup=get_clubs_keyboard([], faculty_id, direction_id)
+            reply_markup=get_clubs_keyboard([], faculty_id, direction_id, lang)
         )
         await callback.answer()
         return
 
-    text = (
-        f"📚 <b>Yo'nalish:</b> {direction.name}\n\n"
-        "⬇️ <i>Quyidagi to'garaklardan birini tanlang va uning shartlari bilan tanishing:</i>"
-    )
+    text = get_text("select_club_prompt", lang, direction_name=direction.name)
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_clubs_keyboard(clubs, faculty_id, direction_id)
+        reply_markup=get_clubs_keyboard(clubs, faculty_id, direction_id, lang)
     )
     await callback.answer()
 
@@ -148,37 +134,36 @@ async def callback_back_to_clubs(callback: CallbackQuery, state: FSMContext):
     faculty_id = int(parts[2])
 
     async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
         direction_repo = DirectionRepository(session)
         club_repo = ClubRepository(session)
         direction = await direction_repo.get_by_id(direction_id)
         clubs = await club_repo.get_active_by_direction(direction_id)
 
     dir_name = direction.name if direction else ""
-    text = (
-        f"📚 <b>Yo'nalish:</b> {dir_name}\n\n"
-        "⬇️ <i>Quyidagi to'garaklardan birini tanlang va uning shartlari bilan tanishing:</i>"
-    )
+    text = get_text("select_club_prompt", lang, direction_name=dir_name)
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_clubs_keyboard(clubs, faculty_id, direction_id)
+        reply_markup=get_clubs_keyboard(clubs, faculty_id, direction_id, lang)
     )
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("club:"))
 async def callback_view_club(callback: CallbackQuery, state: FSMContext):
-    """Step 5: View full details of the selected club."""
+    """Step 5: View full details of the selected club in user's language."""
     club_id = int(callback.data.split(":")[1])
 
     async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
         club_repo = ClubRepository(session)
         club_data = await club_repo.get_detailed_by_id(club_id)
 
     if not club_data:
-        await callback.answer("To'garak ma'lumotlari topilmadi!", show_alert=True)
+        await callback.answer(get_text("club_not_found", lang), show_alert=True)
         return
 
-    # Update FSM data with full club info
+    # Update FSM data
     await state.update_data(
         club_id=club_data["id"],
         club_name=club_data["name"],
@@ -196,14 +181,46 @@ async def callback_view_club(callback: CallbackQuery, state: FSMContext):
     waiting_cnt = club_data["waiting_students_count"]
     max_cap = club_data["max_capacity"]
 
+    # Capacity string localized
     if max_cap > 0:
         if club_data["is_full"]:
-            capacity_text = f"<b>{active_cnt}/{max_cap} nafar</b> <i>(Asosiy o'rinlar to'lgan 🔒 | Navbatda: {waiting_cnt} nafar)</i>"
+            if lang == "ru":
+                capacity_info = f"<b>{active_cnt}/{max_cap}</b> <i>(Основные места заполнены 🔒)</i>"
+            elif lang == "en":
+                capacity_info = f"<b>{active_cnt}/{max_cap}</b> <i>(Main spots full 🔒)</i>"
+            else:
+                capacity_info = f"<b>{active_cnt}/{max_cap}</b> <i>(Asosiy o'rinlar to'lgan 🔒)</i>"
         else:
             free_spots = max_cap - active_cnt
-            capacity_text = f"<b>{active_cnt}/{max_cap} nafar</b> <i>({free_spots} ta bo'sh o'rin mavjud)</i>"
+            if lang == "ru":
+                capacity_info = f"<b>{active_cnt}/{max_cap}</b> <i>(Свободно: {free_spots})</i>"
+            elif lang == "en":
+                capacity_info = f"<b>{active_cnt}/{max_cap}</b> <i>(Available: {free_spots})</i>"
+            else:
+                capacity_info = f"<b>{active_cnt}/{max_cap}</b> <i>({free_spots} ta bo'sh o'rin mavjud)</i>"
     else:
-        capacity_text = f"<b>{active_cnt} nafar</b> <i>(Cheklanmagan)</i>"
+        if lang == "ru":
+            capacity_info = f"<b>{active_cnt}</b> <i>(Без ограничений)</i>"
+        elif lang == "en":
+            capacity_info = f"<b>{active_cnt}</b> <i>(Unlimited)</i>"
+        else:
+            capacity_info = f"<b>{active_cnt} nafar</b> <i>(Cheklanmagan)</i>"
+
+    # Waiting info
+    if waiting_cnt > 0:
+        if lang == "ru":
+            waiting_info = f"<b>{waiting_cnt} человек</b>"
+        elif lang == "en":
+            waiting_info = f"<b>{waiting_cnt} students</b>"
+        else:
+            waiting_info = f"<b>{waiting_cnt} nafar</b>"
+    else:
+        if lang == "ru":
+            waiting_info = "<i>Нет очереди</i>"
+        elif lang == "en":
+            waiting_info = "<i>No queue</i>"
+        else:
+            waiting_info = "<i>Navbat yo'q</i>"
 
     # Deadline formatting
     deadline_line = ""
@@ -211,33 +228,36 @@ async def callback_view_club(callback: CallbackQuery, state: FSMContext):
         dl = club_data["registration_deadline"]
         dl_str = dl.strftime("%d.%m.%Y %H:%M")
         if club_data["is_deadline_passed"]:
-            deadline_line = f"⏳ <b>Ro'yxatdan o'tish muddati:</b> {dl_str} <i>(Muddati tugagan ⛔)</i>\n"
+            if lang == "ru":
+                deadline_line = f"⏳ <b>Срок регистрации:</b> {dl_str} <i>(Срок истек ⛔)</i>\n"
+            elif lang == "en":
+                deadline_line = f"⏳ <b>Registration deadline:</b> {dl_str} <i>(Expired ⛔)</i>\n"
+            else:
+                deadline_line = f"⏳ <b>Ro'yxatdan o'tish muddati:</b> {dl_str} <i>(Muddati tugagan ⛔)</i>\n"
         else:
-            deadline_line = f"⏳ <b>Ro'yxatdan o'tish muddati:</b> {dl_str} <i>(Ochiq ✅)</i>\n"
+            if lang == "ru":
+                deadline_line = f"⏳ <b>Срок регистрации:</b> {dl_str} <i>(Открыто ✅)</i>\n"
+            elif lang == "en":
+                deadline_line = f"⏳ <b>Registration deadline:</b> {dl_str} <i>(Open ✅)</i>\n"
+            else:
+                deadline_line = f"⏳ <b>Ro'yxatdan o'tish muddati:</b> {dl_str} <i>(Ochiq ✅)</i>\n"
 
-    card_text = (
-        f"🎯 <b>TO'GARAK: {club_data['name']}</b>\n\n"
-        f"📝 <b>Qisqacha ma'lumot:</b>\n{club_data['description']}\n\n"
-        f"🏛 <b>Fakultet:</b> {club_data['faculty_name']}\n"
-        f"📚 <b>Yo'nalish:</b> {club_data['direction_name']}\n"
-        f"🗓 <b>Mashg'ulot kunlari:</b> {club_data['schedule_days']}\n"
-        f"⏰ <b>Vaqti:</b> {club_data['schedule_time']}\n"
-        f"📍 <b>Xona / Manzil:</b> {club_data['room_location']}\n"
-        f"👨‍🏫 <b>To'garak rahbari:</b> {club_data['leader_name']}\n"
-        f"📞 <b>Aloqa:</b> {club_data['leader_contact']}\n"
-        f"👥 <b>Qabul qilinganlar:</b> {capacity_text}\n"
-        f"{deadline_line}\n"
+    card_text = get_text(
+        "club_detail_card",
+        lang,
+        name=club_data["name"],
+        faculty_name=club_data["faculty_name"],
+        direction_name=club_data["direction_name"],
+        description=club_data["description"],
+        schedule_days=club_data["schedule_days"],
+        schedule_time=club_data["schedule_time"],
+        room_location=club_data["room_location"],
+        leader_name=club_data["leader_name"],
+        leader_contact=club_data["leader_contact"],
+        capacity_info=capacity_info,
+        waiting_info=waiting_info,
+        deadline_info=deadline_line
     )
-
-    if club_data["is_deadline_passed"]:
-        card_text += "⛔ <i>Ushbu to'garakka qabul muddati tugaganligi sababli yangi arizalar qabul qilinmaydi.</i>"
-    elif club_data["is_full"]:
-        card_text += (
-            "⚠️ <i>To'garakda asosiy o'rinlar to'lgan. Siz <b>ZAXIRA (NAVBAT)</b>ga yozilishingiz mumkin. "
-            "Kimdir chiqib ketsa, navbatdagi talaba avtomatik tarzda qabul qilinadi.</i>"
-        )
-    else:
-        card_text += "<i>To'garakka qatnashishni istasangiz, quyidagi <b>'Ro'yxatdan o'tish'</b> tugmasini bosing:</i>"
 
     await callback.message.edit_text(
         text=card_text,
@@ -247,17 +267,16 @@ async def callback_view_club(callback: CallbackQuery, state: FSMContext):
             faculty_id=club_data["faculty_id"],
             is_expired=club_data["is_deadline_passed"],
             is_full=club_data["is_full"],
-            waiting_count=waiting_cnt
+            waiting_count=waiting_cnt,
+            lang=lang
         )
     )
     await callback.answer()
 
 
 @router.callback_query(F.data == "deadline_expired")
-async def callback_deadline_expired(callback: CallbackQuery):
+async def callback_deadline_expired(callback: CallbackQuery, state: FSMContext):
     """Handle click on expired deadline button."""
-    await callback.answer(
-        "⚠️ Ushbu to'garakka ro'yxatdan o'tish muddati tugagan! Yangi arizalar va navbat qabul qilinmaydi.",
-        show_alert=True
-    )
-
+    async with AsyncSessionLocal() as session:
+        lang = await get_user_lang(callback.from_user.id, session, state)
+    await callback.answer(get_text("deadline_alert", lang), show_alert=True)

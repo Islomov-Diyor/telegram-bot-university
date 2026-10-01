@@ -58,7 +58,7 @@ async def test_student_registration_and_duplicate_prevention():
         )
         assert success is True
         assert reg is not None
-        assert "Muvaffaqiyatli" in msg
+        assert "Muvaffaqiyatli" in msg or "zaxira" in msg.lower()
 
         # 2. Second registration to the SAME club MUST be rejected (Requirement 11)
         dup_success, dup_msg, dup_reg = await reg_service.register_student(

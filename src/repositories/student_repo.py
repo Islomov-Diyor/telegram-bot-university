@@ -14,18 +14,50 @@ class StudentRepository(BaseRepository[Student]):
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
+    async def get_language(self, telegram_id: int) -> str:
+        student = await self.get_by_telegram_id(telegram_id)
+        if student and getattr(student, "language", None):
+            return student.language
+        return "uz"
+
+    async def set_language(
+        self,
+        telegram_id: int,
+        language: str,
+        username: Optional[str] = None
+    ) -> Student:
+        student = await self.get_by_telegram_id(telegram_id)
+        if student:
+            student.language = language
+            if username:
+                student.username = username
+            await self.session.commit()
+            await self.session.refresh(student)
+            return student
+        else:
+            return await self.create(
+                telegram_id=telegram_id,
+                language=language,
+                username=username,
+                full_name="",
+                phone_number=""
+            )
+
     async def upsert_student(
         self,
         telegram_id: int,
         full_name: str,
         phone_number: str,
-        username: Optional[str] = None
+        username: Optional[str] = None,
+        language: Optional[str] = None
     ) -> Student:
         student = await self.get_by_telegram_id(telegram_id)
         if student:
             student.full_name = full_name
             student.phone_number = phone_number
             student.username = username
+            if language:
+                student.language = language
             await self.session.commit()
             await self.session.refresh(student)
             return student
@@ -34,5 +66,6 @@ class StudentRepository(BaseRepository[Student]):
                 telegram_id=telegram_id,
                 full_name=full_name,
                 phone_number=phone_number,
-                username=username
+                username=username,
+                language=language or "uz"
             )

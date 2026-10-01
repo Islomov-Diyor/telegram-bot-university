@@ -40,12 +40,13 @@ class RegistrationService:
         phone_number: str,
         club_id: int,
         course_level: int,
-        telegram_username: Optional[str] = None
+        telegram_username: Optional[str] = None,
+        language: Optional[str] = "uz"
     ) -> Tuple[bool, str, Optional[Registration]]:
         """
         Handles the full student registration lifecycle:
         1. Validates club existence and checks registration deadline.
-        2. Upserts student record.
+        2. Upserts student record with language.
         3. Prevents duplicate enrollment (active or waiting).
         4. Checks max capacity:
            - If active spots available -> enrolls as 'active'.
@@ -75,7 +76,8 @@ class RegistrationService:
             telegram_id=telegram_id,
             full_name=full_name.strip(),
             phone_number=phone_number.strip(),
-            username=telegram_username
+            username=telegram_username,
+            language=language or "uz"
         )
 
         # 3. Check if student already has a record for this club
@@ -201,28 +203,32 @@ class RegistrationService:
                         "club_name": club.name
                     }
 
-                    # Send immediate automatic Telegram notification
+                    # Send immediate automatic Telegram notification in student's language
                     if self.bot:
                         try:
+                            from src.bot.i18n import get_text
+                            student_lang = getattr(promoted_student, "language", "uz") or "uz"
+                            promo_text = get_text(
+                                "promotion_notification",
+                                student_lang,
+                                full_name=promoted_student.full_name or "Talaba",
+                                club_name=club.name,
+                                faculty_name=next_waiting.faculty_name_snap,
+                                direction_name=next_waiting.direction_name_snap,
+                                schedule_days=club.schedule_days,
+                                schedule_time=club.schedule_time,
+                                room_location=club.room_location,
+                                leader_name=club.leader_name,
+                                leader_contact=club.leader_contact
+                            )
                             await self.bot.send_message(
                                 chat_id=promoted_student.telegram_id,
-                                text=(
-                                    "🎉 <b>AJOYIB YANGILIK! TO'GARAKDA BO'SH O'RIN PAYDO BO'LDI!</b>\n\n"
-                                    f"Hurmatli <b>{promoted_student.full_name}</b>!\n\n"
-                                    f"Siz navbatda turgan <b>'{club.name}'</b> to'garagida bo'sh o'rin ochildi va siz avtomatik tarzda "
-                                    "<b>ASOSIY A'ZOLAR RO'YXATIGA QABUL QILINDINGIZ!</b> ✅\n\n"
-                                    f"🏛 <b>Fakultet:</b> {next_waiting.faculty_name_snap}\n"
-                                    f"📚 <b>Yo'nalish:</b> {next_waiting.direction_name_snap}\n"
-                                    f"🗓 <b>Mashg'ulot kunlari:</b> {club.schedule_days}\n"
-                                    f"⏰ <b>Vaqti:</b> {club.schedule_time}\n"
-                                    f"📍 <b>Xonasi:</b> {club.room_location}\n"
-                                    f"👨‍🏫 <b>To'garak rahbari:</b> {club.leader_name} ({club.leader_contact})\n\n"
-                                    "<i>Mashg'ulotlarga o'z vaqtida qatnashishingizni so'raymiz!</i>"
-                                ),
+                                text=promo_text,
                                 parse_mode="HTML"
                             )
-                            logger.info(f"Notified promoted student {promoted_student.full_name} ({promoted_student.telegram_id}) for club {club.name}")
+                            logger.info(f"Notified promoted student {promoted_student.full_name} ({promoted_student.telegram_id}) for club {club.name} in [{student_lang}]")
                         except Exception as e:
+                            logger.error(f"Failed to send Telegram notification to promoted student: {e}")
                             logger.error(f"Failed to send Telegram notification to promoted student: {e}")
         else:
             # A waiting student left the queue: re-order remaining waiting queue
