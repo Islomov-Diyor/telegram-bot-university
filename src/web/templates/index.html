@@ -77,15 +77,27 @@
             <h1 class="page-title">Universitet Ko'rsatkichlari</h1>
             <p class="page-desc">Iqtidorli talabalar va to'garaklar faoliyatining umumiy statistikasi</p>
           </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary" onclick="manualRefresh()" id="btnManualRefresh" title="Ma'lumotlarni yangilash">
+              <span id="refreshIcon">🔄</span> <span>Yangilash</span>
+            </button>
+          </div>
         </div>
 
-        <div class="metrics-grid">
+        <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
           <div class="glass-panel metric-card">
             <div class="metric-info">
-              <div class="label">Jami A'zo Talabalar</div>
+              <div class="label">Asosiy A'zo Talabalar</div>
               <div class="value" id="kpiStudents">0</div>
             </div>
             <div class="metric-icon-box icon-emerald">👥</div>
+          </div>
+          <div class="glass-panel metric-card">
+            <div class="metric-info">
+              <div class="label">Zaxira (Navbatda)</div>
+              <div class="value" id="kpiWaiting">0</div>
+            </div>
+            <div class="metric-icon-box icon-amber">⏳</div>
           </div>
           <div class="glass-panel metric-card">
             <div class="metric-info">
@@ -127,6 +139,38 @@
             </div>
           </div>
         </div>
+
+        <!-- Recent Registrations on Dashboard (solves issue: data appearing & disappearing) -->
+        <div class="glass-panel" style="margin-top: 24px; padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700;">⚡ So'nggi Ro'yxatdan O'tgan Talabalar</h3>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Bot orqali kelib tushgan yangi talabalar ro'yxati (avtomatik jonli yangilanadi)</p>
+            </div>
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;" onclick="switchTab('students')">
+              Barcha talabalar ro'yxati &rarr;
+            </button>
+          </div>
+          <div class="table-container" style="border: none; padding: 0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Talaba F.I.Sh</th>
+                  <th>To'garak</th>
+                  <th>Fakultet</th>
+                  <th>Kurs</th>
+                  <th>Holati</th>
+                  <th>Telefon</th>
+                  <th>Ro'yxatdan o'tgan</th>
+                </tr>
+              </thead>
+              <tbody id="recentStudentsTableBody">
+                <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Yuklanmoqda...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- 2. CLUBS TAB -->
@@ -134,7 +178,7 @@
         <div class="top-header">
           <div>
             <h1 class="page-title">To'garaklar Boshqaruvi</h1>
-            <p class="page-desc">Mavjud to'garaklar, dars vaqtlari, xonalari va rahbarlarini boshqarish</p>
+            <p class="page-desc">Mavjud to'garaklar, sig'imlar, qabul muddatlari va rahbarlarini boshqarish</p>
           </div>
           <div class="header-actions">
             <button class="btn btn-primary" onclick="openClubModal()">
@@ -162,7 +206,7 @@
         <div class="top-header">
           <div>
             <h1 class="page-title">Iqtidorli Talabalar Ro'yxati</h1>
-            <p class="page-desc">To'garaklarga a'zo bo'lgan talabalar jurnali va ma'lumotlarni eksport qilish</p>
+            <p class="page-desc">To'garaklarga a'zo bo'lgan va zaxira navbatidagi talabalar jurnali</p>
           </div>
           <div class="header-actions">
             <a id="btnExportExcel" class="btn btn-success" href="/api/v1/export/excel" target="_blank">
@@ -194,6 +238,11 @@
               <option value="3">3-kurs</option>
               <option value="4">4-kurs</option>
             </select>
+            <select id="studentFilterStatus" class="form-select" onchange="fetchStudents()">
+              <option value="">Barcha holatlar</option>
+              <option value="active">✅ Faqat Asosiy a'zolar</option>
+              <option value="waiting">⏳ Faqat Navbatdagilar</option>
+            </select>
           </div>
         </div>
 
@@ -207,6 +256,7 @@
                 <th>Yo'nalish</th>
                 <th>To'garak</th>
                 <th>Kurs</th>
+                <th>Holati</th>
                 <th>Telefon</th>
                 <th>Telegram</th>
                 <th>Sana</th>
@@ -422,6 +472,18 @@
             <div class="form-group">
               <label class="form-label">Rahbar Aloqasi * (Requirement 13)</label>
               <input type="text" id="clubFormLeaderContact" class="form-input" style="width: 100%;" required placeholder="+998901234567 / @rahbar">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label">Maksimal Sig'im (O'rinlar soni) *</label>
+              <input type="number" id="clubFormMaxCapacity" class="form-input" style="width: 100%;" min="0" placeholder="Masalan: 20 (0 = cheksiz)">
+              <small style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Sig'im to'lgach, keyingi talabalar avtomatik navbatga olinadi</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ro'yxatdan O'tish Muddati (Deadline)</label>
+              <input type="datetime-local" id="clubFormDeadline" class="form-input" style="width: 100%;">
+              <small style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Muddat tugasa, qabul va navbat yopiladi</small>
             </div>
           </div>
         </div>

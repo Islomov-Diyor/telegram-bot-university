@@ -21,11 +21,13 @@ class RegistrationResponse(BaseModel):
     full_name: str
     phone_number: str
     telegram_username: Optional[str] = None
+    telegram_id: Optional[int] = None
     faculty_name: str
     direction_name: str
     club_name: str
     course_level: int
     status: str
+    queue_position: Optional[int] = None
     registered_at: datetime
 
 
@@ -34,6 +36,8 @@ class RegistrationFilterParams(BaseModel):
     direction_id: Optional[int] = None
     club_id: Optional[int] = None
     course_level: Optional[int] = None
+    status: Optional[str] = None
     search: Optional[str] = None
     limit: int = 50
     offset: int = 0
+

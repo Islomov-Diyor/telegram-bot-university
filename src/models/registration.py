@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from sqlalchemy import String, Integer, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.core.database import Base
@@ -22,7 +22,8 @@ class Registration(Base):
     course_level: Mapped[int] = mapped_column(Integer, nullable=False)
     faculty_name_snap: Mapped[str] = mapped_column(String(150), nullable=False)
     direction_name_snap: Mapped[str] = mapped_column(String(200), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)  # active, waiting, cancelled
+    queue_position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     registered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Constraints: Bitta talaba bitta to'garakka faqat 1 marta a'zo bo'la oladi

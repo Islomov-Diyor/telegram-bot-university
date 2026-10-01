@@ -185,14 +185,35 @@ async def callback_view_club(callback: CallbackQuery, state: FSMContext):
         direction_id=club_data["direction_id"],
         direction_name=club_data["direction_name"],
         faculty_id=club_data["faculty_id"],
-        faculty_name=club_data["faculty_name"]
+        faculty_name=club_data["faculty_name"],
+        max_capacity=club_data["max_capacity"],
+        is_full=club_data["is_full"],
+        is_deadline_passed=club_data["is_deadline_passed"],
+        waiting_count=club_data["waiting_students_count"]
     )
 
-    capacity_text = (
-        f"{club_data['students_count']} nafar a'zo"
-        if club_data['max_capacity'] == 0
-        else f"{club_data['students_count']} / {club_data['max_capacity']} nafar"
-    )
+    active_cnt = club_data["students_count"]
+    waiting_cnt = club_data["waiting_students_count"]
+    max_cap = club_data["max_capacity"]
+
+    if max_cap > 0:
+        if club_data["is_full"]:
+            capacity_text = f"<b>{active_cnt}/{max_cap} nafar</b> <i>(Asosiy o'rinlar to'lgan 🔒 | Navbatda: {waiting_cnt} nafar)</i>"
+        else:
+            free_spots = max_cap - active_cnt
+            capacity_text = f"<b>{active_cnt}/{max_cap} nafar</b> <i>({free_spots} ta bo'sh o'rin mavjud)</i>"
+    else:
+        capacity_text = f"<b>{active_cnt} nafar</b> <i>(Cheklanmagan)</i>"
+
+    # Deadline formatting
+    deadline_line = ""
+    if club_data.get("registration_deadline"):
+        dl = club_data["registration_deadline"]
+        dl_str = dl.strftime("%d.%m.%Y %H:%M")
+        if club_data["is_deadline_passed"]:
+            deadline_line = f"⏳ <b>Ro'yxatdan o'tish muddati:</b> {dl_str} <i>(Muddati tugagan ⛔)</i>\n"
+        else:
+            deadline_line = f"⏳ <b>Ro'yxatdan o'tish muddati:</b> {dl_str} <i>(Ochiq ✅)</i>\n"
 
     card_text = (
         f"🎯 <b>TO'GARAK: {club_data['name']}</b>\n\n"
@@ -204,16 +225,39 @@ async def callback_view_club(callback: CallbackQuery, state: FSMContext):
         f"📍 <b>Xona / Manzil:</b> {club_data['room_location']}\n"
         f"👨‍🏫 <b>To'garak rahbari:</b> {club_data['leader_name']}\n"
         f"📞 <b>Aloqa:</b> {club_data['leader_contact']}\n"
-        f"👥 <b>Qabul qilinganlar:</b> {capacity_text}\n\n"
-        "<i>To'garakka qatnashishni istasangiz, quyidagi <b>'Ro'yxatdan o'tish'</b> tugmasini bosing:</i>"
+        f"👥 <b>Qabul qilinganlar:</b> {capacity_text}\n"
+        f"{deadline_line}\n"
     )
+
+    if club_data["is_deadline_passed"]:
+        card_text += "⛔ <i>Ushbu to'garakka qabul muddati tugaganligi sababli yangi arizalar qabul qilinmaydi.</i>"
+    elif club_data["is_full"]:
+        card_text += (
+            "⚠️ <i>To'garakda asosiy o'rinlar to'lgan. Siz <b>ZAXIRA (NAVBAT)</b>ga yozilishingiz mumkin. "
+            "Kimdir chiqib ketsa, navbatdagi talaba avtomatik tarzda qabul qilinadi.</i>"
+        )
+    else:
+        card_text += "<i>To'garakka qatnashishni istasangiz, quyidagi <b>'Ro'yxatdan o'tish'</b> tugmasini bosing:</i>"
 
     await callback.message.edit_text(
         text=card_text,
         reply_markup=get_club_detail_keyboard(
             club_id=club_data["id"],
             direction_id=club_data["direction_id"],
-            faculty_id=club_data["faculty_id"]
+            faculty_id=club_data["faculty_id"],
+            is_expired=club_data["is_deadline_passed"],
+            is_full=club_data["is_full"],
+            waiting_count=waiting_cnt
         )
     )
     await callback.answer()
+
+
+@router.callback_query(F.data == "deadline_expired")
+async def callback_deadline_expired(callback: CallbackQuery):
+    """Handle click on expired deadline button."""
+    await callback.answer(
+        "⚠️ Ushbu to'garakka ro'yxatdan o'tish muddati tugagan! Yangi arizalar va navbat qabul qilinmaydi.",
+        show_alert=True
+    )
+

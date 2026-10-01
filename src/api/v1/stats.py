@@ -27,6 +27,7 @@ async def get_dashboard_overview(
     club_count = (await session.execute(select(func.count(Club.id)))).scalar() or 0
     student_count = (await session.execute(select(func.count(Student.id)))).scalar() or 0
     reg_count = (await session.execute(select(func.count(Registration.id)).where(Registration.status == "active"))).scalar() or 0
+    waiting_count = (await session.execute(select(func.count(Registration.id)).where(Registration.status == "waiting"))).scalar() or 0
 
     # 2. Top 5 popular clubs
     top_clubs_stmt = (
@@ -63,6 +64,7 @@ async def get_dashboard_overview(
         "clubs_count": club_count,
         "students_count": student_count,
         "registrations_count": reg_count,
+        "waiting_count": waiting_count,
         "top_clubs": top_clubs,
         "faculty_breakdown": faculty_breakdown
     }

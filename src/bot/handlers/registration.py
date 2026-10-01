@@ -35,16 +35,35 @@ async def callback_start_registration(callback: CallbackQuery, state: FSMContext
             await callback.answer("To'garak topilmadi!", show_alert=True)
             return
 
-        # Pre-check: Has this student already registered?
+        # Check deadline
+        if club_data.get("is_deadline_passed"):
+            await callback.answer(
+                "⚠️ Ushbu to'garakka ro'yxatdan o'tish muddati tugagan! Yangi arizalar qabul qilinmaydi.",
+                show_alert=True
+            )
+            return
+
+        # Pre-check: Has this student already registered or waiting?
         existing_student = await student_repo.get_by_telegram_id(callback.from_user.id)
         if existing_student:
-            is_reg = await reg_repo.is_already_registered(existing_student.id, club_id)
-            if is_reg:
-                await callback.answer(
-                    "⚠️ Siz allaqachon ushbu to'garakka a'zo bo'lgansiz!",
-                    show_alert=True
-                )
-                return
+            existing_reg = await reg_repo.get_by_student_and_club(existing_student.id, club_id)
+            if existing_reg:
+                if existing_reg.status == "active":
+                    await callback.answer(
+                        "⚠️ Siz allaqachon ushbu to'garakka a'zo bo'lgansiz!",
+                        show_alert=True
+                    )
+                    return
+                elif existing_reg.status == "waiting":
+                    pos_str = f" (#{existing_reg.queue_position})" if existing_reg.queue_position else ""
+                    await callback.answer(
+                        f"⚠️ Siz allaqachon ushbu to'garak zaxira navbatidasiz{pos_str}!",
+                        show_alert=True
+                    )
+                    return
+
+    is_full = club_data.get("is_full", False)
+    waiting_cnt = club_data.get("waiting_students_count", 0)
 
     # Update state data with club and auto-populated faculty & direction
     await state.update_data(
@@ -53,15 +72,28 @@ async def callback_start_registration(callback: CallbackQuery, state: FSMContext
         direction_id=club_data["direction_id"],
         direction_name=club_data["direction_name"],
         faculty_id=club_data["faculty_id"],
-        faculty_name=club_data["faculty_name"]
+        faculty_name=club_data["faculty_name"],
+        is_full=is_full,
+        next_queue_pos=waiting_cnt + 1
     )
 
     await state.set_state(StudentRegistrationState.waiting_for_full_name)
-    await callback.message.answer(
-        f"📝 <b>'{club_data['name']}' to'garagiga ro'yxatdan o'tish</b>\n\n"
-        "1/3. Iltimos, to'liq <b>ism-familiyangizni</b> kiriting:\n"
-        "<i>(Masalan: Saidov Jasur Akmal o'g'li)</i>"
-    )
+
+    if is_full:
+        intro_text = (
+            f"📝 <b>'{club_data['name']}' to'garagida asosiy o'rinlar to'lgan.</b>\n"
+            f"ℹ️ Siz <b>ZAXIRA (NAVBAT #{waiting_cnt + 1})</b>ga yozilmoqdasiz.\n\n"
+            "1/3. Iltimos, to'liq <b>ism-familiyangizni</b> kiriting:\n"
+            "<i>(Masalan: Saidov Jasur Akmal o'g'li)</i>"
+        )
+    else:
+        intro_text = (
+            f"📝 <b>'{club_data['name']}' to'garagiga ro'yxatdan o'tish</b>\n\n"
+            "1/3. Iltimos, to'liq <b>ism-familiyangizni</b> kiriting:\n"
+            "<i>(Masalan: Saidov Jasur Akmal o'g'li)</i>"
+        )
+
+    await callback.message.answer(intro_text)
     await callback.answer()
 
 
@@ -223,16 +255,30 @@ async def process_final_confirmation(callback: CallbackQuery, state: FSMContext,
     await state.clear()
 
     if success:
-        # Step 12: Success message
-        success_card = (
-            "🎉 <b>TABRIKLAYMIZ! RO'YXATDAN O'TISH MUVAFFAQIYATLI YAKUNLANDI!</b>\n\n"
-            f"Siz <b>'{data.get('club_name')}'</b> to'garagiga a'zo bo'ldingiz.\n\n"
-            "📌 <b>Eslatma:</b> To'garak rahbari yaqin vaqt ichida siz bilan bog'lanadi. "
-            "Mashg'ulotlarga o'z vaqtida kelishingizni so'raymiz.\n\n"
-            "<i>Yana boshqa to'garaklar bilan tanishish uchun /start ni bosing.</i>"
-        )
-        await callback.message.edit_text(text=success_card)
-        await callback.answer("Muvaffaqiyatli ro'yxatdan o'tdingiz!", show_alert=False)
+        if registration and registration.status == "waiting":
+            queue_card = (
+                "📋 <b>SIZ ZAXIRA (NAVBAT) RO'YXATIGA YOZILDINGIZ!</b>\n\n"
+                f"🎯 <b>To'garak:</b> {data.get('club_name')}\n"
+                f"🔢 <b>Sizning navbat raqamingiz:</b> <b>#{registration.queue_position}</b>\n\n"
+                "📌 <b>Qanday ishlaydi?</b>\n"
+                "Ushbu to'garakda asosiy o'rinlar to'lganligi sababli siz zaxira navbatidasiz. "
+                "Agar biror faol talaba to'garakdan chiqsa yoki a'zoligini bekor qilsa, "
+                "navbat bo'yicha <b>avtomatik tarzda asosiy a'zolar ro'yxatiga o'tkazilasiz</b> va bot sizga darhol xushxabar yuboradi!\n\n"
+                "<i>O'z to'garaklaringiz va navbat holatini <b>'📋 Mening to'garaklarim'</b> bo'limida kuzatib borishingiz mumkin.</i>"
+            )
+            await callback.message.edit_text(text=queue_card)
+            await callback.answer(f"Zaxira navbatiga yozildingiz (#{registration.queue_position})!", show_alert=False)
+        else:
+            # Step 12: Active success message
+            success_card = (
+                "🎉 <b>TABRIKLAYMIZ! RO'YXATDAN O'TISH MUVAFFAQIYATLI YAKUNLANDI!</b>\n\n"
+                f"Siz <b>'{data.get('club_name')}'</b> to'garagining <b>asosiy a'zosi</b> bo'ldingiz.\n\n"
+                "📌 <b>Eslatma:</b> To'garak rahbari yaqin vaqt ichida siz bilan bog'lanadi. "
+                "Mashg'ulotlarga o'z vaqtida kelishingizni so'raymiz.\n\n"
+                "<i>Yana boshqa to'garaklar bilan tanishish uchun /start ni bosing.</i>"
+            )
+            await callback.message.edit_text(text=success_card)
+            await callback.answer("Muvaffaqiyatli ro'yxatdan o'tdingiz!", show_alert=False)
     else:
         # Step 11: Duplicate rejection or error message
         await callback.message.edit_text(
@@ -240,3 +286,4 @@ async def process_final_confirmation(callback: CallbackQuery, state: FSMContext,
             "To'garaklar katalogiga qaytish uchun /start ni bosing."
         )
         await callback.answer(message_text, show_alert=True)
+

@@ -25,6 +25,7 @@ class ExportService:
             "Ta'lim Yo'nalishi",
             "To'garak Nomi",
             "Kursi",
+            "Holati",
             "Telefon Raqami",
             "Telegram",
             "Ro'yxatdan O'tgan Sana"
@@ -69,6 +70,8 @@ class ExportService:
             username = item.get("telegram_username")
             tg_text = f"@{username}" if username else "-"
 
+            status_str = "Asosiy a'zo" if item.get("status") == "active" else f"Navbatda (#{item.get('queue_position', '')})"
+
             row_data = [
                 idx,
                 item.get("full_name", ""),
@@ -76,6 +79,7 @@ class ExportService:
                 item.get("direction_name", ""),
                 item.get("club_name", ""),
                 f"{item.get('course_level', '')}-kurs",
+                status_str,
                 item.get("phone_number", ""),
                 tg_text,
                 date_str
@@ -89,7 +93,7 @@ class ExportService:
                 cell.fill = row_fill
                 cell.border = thin_border
                 cell.font = Font(name="Calibri", size=10)
-                if col_idx in (1, 6, 7, 8, 9):
+                if col_idx in (1, 6, 7, 8, 9, 10):
                     cell.alignment = center_align
                 else:
                     cell.alignment = left_align
@@ -99,9 +103,9 @@ class ExportService:
             max_len = 0
             col_letter = get_column_letter(col[0].column)
             for cell in col:
-                val = str(cell.value or "")
-                if len(val) > max_len:
-                    max_len = len(val)
+                val_str = str(cell.value or "")
+                if len(val_str) > max_len:
+                    max_len = len(val_str)
             ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
         buffer = io.BytesIO()
@@ -112,11 +116,10 @@ class ExportService:
     @staticmethod
     def generate_csv(registrations: List[Dict[str, Any]]) -> io.BytesIO:
         """
-        Generate CSV encoded with UTF-8 BOM (utf-8-sig) to ensure Uzbek characters
-        render flawlessly across all spreadsheet applications like Microsoft Excel.
+        Generate a CSV formatted buffer with UTF-8 BOM encoding for complete Excel compatibility.
         """
         buffer = io.StringIO()
-        writer = csv.writer(buffer, delimiter=",", quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(buffer, quoting=csv.QUOTE_MINIMAL)
 
         # Header
         writer.writerow([
@@ -126,6 +129,7 @@ class ExportService:
             "Yo'nalish",
             "To'garak",
             "Kursi",
+            "Holati",
             "Telefon Raqami",
             "Telegram",
             "Ro'yxatdan O'tgan Sana"
@@ -140,6 +144,7 @@ class ExportService:
 
             username = item.get("telegram_username")
             tg_text = f"@{username}" if username else "-"
+            status_str = "Asosiy a'zo" if item.get("status") == "active" else f"Navbatda (#{item.get('queue_position', '')})"
 
             writer.writerow([
                 idx,
@@ -148,6 +153,7 @@ class ExportService:
                 item.get("direction_name", ""),
                 item.get("club_name", ""),
                 f"{item.get('course_level', '')}-kurs",
+                status_str,
                 item.get("phone_number", ""),
                 tg_text,
                 date_str

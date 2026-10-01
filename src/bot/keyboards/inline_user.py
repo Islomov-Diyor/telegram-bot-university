@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from src.models.faculty import Faculty
@@ -39,10 +39,24 @@ def get_clubs_keyboard(clubs: List[Club], faculty_id: int, direction_id: int) ->
     return builder.as_markup()
 
 
-def get_club_detail_keyboard(club_id: int, direction_id: int, faculty_id: int) -> InlineKeyboardMarkup:
-    """Action buttons for club details: Register or Go Back."""
+def get_club_detail_keyboard(
+    club_id: int,
+    direction_id: int,
+    faculty_id: int,
+    is_expired: bool = False,
+    is_full: bool = False,
+    waiting_count: int = 0
+) -> InlineKeyboardMarkup:
+    """Action buttons for club details: Register, Join Queue, or Deadline Expired."""
     builder = InlineKeyboardBuilder()
-    builder.button(text="✍️ Ro'yxatdan o'tish", callback_data=f"reg_start:{club_id}")
+
+    if is_expired:
+        builder.button(text="⛔ Ro'yxatdan o'tish yopilgan (Muddati tugagan)", callback_data="deadline_expired")
+    elif is_full:
+        builder.button(text=f"⏳ Navbatga yozilish (Zaxira #{waiting_count + 1})", callback_data=f"reg_start:{club_id}")
+    else:
+        builder.button(text="✍️ Ro'yxatdan o'tish", callback_data=f"reg_start:{club_id}")
+
     builder.button(text="⬅️ To'garaklar ro'yxatiga qaytish", callback_data=f"back_to_clubs:{direction_id}:{faculty_id}")
     builder.adjust(1)
     return builder.as_markup()
@@ -65,5 +79,14 @@ def get_confirmation_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="✅ Ha, tasdiqlayman", callback_data="confirm_reg:yes")
     builder.button(text="❌ Bekor qilish", callback_data="confirm_reg:no")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def get_leave_confirm_keyboard(registration_id: int) -> InlineKeyboardMarkup:
+    """Confirmation keyboard before withdrawing/cancelling a registration."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Ha, to'garakdan chiqish", callback_data=f"confirm_leave:{registration_id}")
+    builder.button(text="❌ Bekor qilish", callback_data="cancel_leave")
     builder.adjust(1)
     return builder.as_markup()

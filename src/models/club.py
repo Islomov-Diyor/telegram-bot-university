@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, Text, Boolean, DateTime, Integer, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.core.database import Base
@@ -24,6 +24,7 @@ class Club(Base):
     leader_name: Mapped[str] = mapped_column(String(150), nullable=False)    # Masalan: "Dots. Eshmatov T.M."
     leader_contact: Mapped[str] = mapped_column(String(100), nullable=False) # Masalan: "+998901234567 / @eshmatov"
     max_capacity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    registration_deadline: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

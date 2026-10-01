@@ -18,6 +18,7 @@ async def export_to_excel(
     club_id: Optional[int] = Query(None, description="To'garak bo'yicha filter"),
     direction_id: Optional[int] = Query(None, description="Yo'nalish bo'yicha filter"),
     faculty_id: Optional[int] = Query(None, description="Fakultet bo'yicha filter"),
+    status: Optional[str] = Query(None, description="A'zolik holati bo'yicha filter"),
     current_admin: Admin = Depends(get_current_admin),
     session: AsyncSession = Depends(get_db)
 ):
@@ -28,7 +29,8 @@ async def export_to_excel(
     items = await repo.get_all_for_export(
         club_id=club_id,
         direction_id=direction_id,
-        faculty_id=faculty_id
+        faculty_id=faculty_id,
+        status=status
     )
 
     buffer = ExportService.generate_excel(items)
@@ -47,6 +49,7 @@ async def export_to_csv(
     club_id: Optional[int] = Query(None, description="To'garak bo'yicha filter"),
     direction_id: Optional[int] = Query(None, description="Yo'nalish bo'yicha filter"),
     faculty_id: Optional[int] = Query(None, description="Fakultet bo'yicha filter"),
+    status: Optional[str] = Query(None, description="A'zolik holati bo'yicha filter"),
     current_admin: Admin = Depends(get_current_admin),
     session: AsyncSession = Depends(get_db)
 ):
@@ -57,7 +60,8 @@ async def export_to_csv(
     items = await repo.get_all_for_export(
         club_id=club_id,
         direction_id=direction_id,
-        faculty_id=faculty_id
+        faculty_id=faculty_id,
+        status=status
     )
 
     buffer = ExportService.generate_csv(items)

@@ -13,6 +13,7 @@ class ClubBase(BaseModel):
     leader_name: str = Field(..., min_length=2, max_length=150)
     leader_contact: str = Field(..., min_length=2, max_length=100)
     max_capacity: int = Field(default=0, ge=0)
+    registration_deadline: Optional[datetime] = None
     is_active: bool = True
 
 
@@ -30,6 +31,7 @@ class ClubUpdate(BaseModel):
     leader_name: Optional[str] = Field(None, min_length=2, max_length=150)
     leader_contact: Optional[str] = Field(None, min_length=2, max_length=100)
     max_capacity: Optional[int] = Field(None, ge=0)
+    registration_deadline: Optional[datetime] = None
     is_active: Optional[bool] = None
 
 
@@ -43,3 +45,8 @@ class ClubResponse(ClubBase):
     faculty_name: Optional[str] = None
     faculty_id: Optional[int] = None
     students_count: int = 0
+    active_students_count: int = 0
+    waiting_students_count: int = 0
+    is_full: bool = False
+    is_deadline_passed: bool = False
+

@@ -49,8 +49,8 @@ async def create_club(
         schedule_time=data.schedule_time.strip(),
         room_location=data.room_location.strip(),
         leader_name=data.leader_name.strip(),
-        leader_contact=data.leader_contact.strip(),
         max_capacity=data.max_capacity,
+        registration_deadline=data.registration_deadline,
         is_active=data.is_active
     )
 
