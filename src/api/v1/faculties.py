@@ -6,7 +6,7 @@ from src.core.database import get_db
 from src.repositories.faculty_repo import FacultyRepository
 from src.schemas.faculty import FacultyCreate, FacultyUpdate, FacultyResponse
 from src.models.admin import Admin
-from src.api.deps import get_current_admin
+from src.api.deps import get_current_admin, require_superadmin
 
 router = APIRouter(prefix="/faculties", tags=["Faculty Management"])
 
@@ -25,7 +25,7 @@ async def list_faculties(
 @router.post("", response_model=FacultyResponse, status_code=status.HTTP_201_CREATED)
 async def create_faculty(
     data: FacultyCreate,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Create a new academic faculty."""
@@ -56,7 +56,7 @@ async def create_faculty(
 async def update_faculty(
     faculty_id: int,
     data: FacultyUpdate,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Update faculty details."""
@@ -85,7 +85,7 @@ async def update_faculty(
 @router.delete("/{faculty_id}")
 async def delete_faculty(
     faculty_id: int,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Delete a faculty along with its directions and clubs."""

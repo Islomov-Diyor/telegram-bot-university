@@ -49,18 +49,37 @@
           </a>
         </li>
         <li>
+          <a class="nav-item" data-tab="attendance">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+            <span data-i18n="nav_attendance">Davomat & Natija</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" data-tab="broadcast">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            <span data-i18n="nav_broadcast">Xabar Yuborish</span>
+          </a>
+        </li>
+        <li id="navTeachers">
+          <a class="nav-item" data-tab="teachers">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            <span data-i18n="nav_teachers">O'qituvchilar</span>
+          </a>
+        </li>
+        <li id="navAcademic">
           <a class="nav-item" data-tab="academic">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
             <span data-i18n="nav_academic">Fakultet va Yo'nalishlar</span>
           </a>
         </li>
-        <li>
+        <li id="navSettings">
           <a class="nav-item" data-tab="settings">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             <span data-i18n="nav_settings">Sozlamalar & Notification</span>
           </a>
         </li>
       </ul>
+
 
       <div class="sidebar-footer">
         <div class="user-info">
@@ -278,8 +297,274 @@
         </div>
       </section>
 
-      <!-- 4. ACADEMIC TAB -->
+      <!-- 4. ATTENDANCE & RESULTS TAB -->
+      <section id="tab-attendance" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title" data-i18n="attendance_title">Davomat va Kurs Natijalari</h1>
+            <p class="page-desc" data-i18n="attendance_desc">Har dars bo'yicha davomat qilish, darsga qatnashish foizi va natijalar jurnali</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary" onclick="triggerClubReminderFromAttendance()" id="btnAttendanceReminder" title="Ushbu to'garak talabalariga Telegram orqali dars eslatmasini yuborish">
+              <span data-i18n="btn_send_reminder">🔔 Dars eslatmasi yuborish</span>
+            </button>
+            <button class="btn btn-success" onclick="downloadAttendanceExcel()" id="btnAttendanceExportExcel" title="Davomat va foizlar jurnalini Excel formatda yuklab olish">
+              <span>📊 Excel Natijalar</span>
+            </button>
+            <button class="btn btn-primary" onclick="openAttendanceLessonModal()">
+              <span data-i18n="btn_new_lesson">+ Yangi Dars Davomati</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & View Switcher -->
+        <div class="glass-panel filter-toolbar" style="margin-bottom: 20px;">
+          <div class="filter-group" style="align-items: center;">
+            <label class="form-label" style="margin-bottom: 0; font-size: 13px;" for="attendanceClubSelect">To'garak:</label>
+            <select id="attendanceClubSelect" class="form-select" style="min-width: 260px;" onchange="onAttendanceClubChange()">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+
+          <div class="subnav-tabs" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+            <button type="button" class="subnav-pill active" id="btnSubnavRoster" onclick="switchAttendanceSubView('roster')">
+              📋 Darslar Jurnali
+            </button>
+            <button type="button" class="subnav-pill" id="btnSubnavResults" onclick="switchAttendanceSubView('results')">
+              🏆 Kurs Natijalari (Foizlar)
+            </button>
+          </div>
+        </div>
+
+        <!-- SUBVIEW A: Lesson Roster & Attendance Taking -->
+        <div id="attendanceRosterView" style="display: grid; grid-template-columns: 320px 1fr; gap: 24px;">
+          <!-- Left: Lessons list -->
+          <div class="glass-panel" style="padding: 20px; max-height: 700px; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 15px; font-weight: 700;">Darslar Tarixi</h3>
+              <span class="badge badge-indigo" id="lessonsCountBadge">0 ta dars</span>
+            </div>
+            <div id="lessonsListContainer" style="display: flex; flex-direction: column; gap: 10px;">
+              <p style="color: var(--text-muted); font-size: 13px;">Darslar mavjud emas.</p>
+            </div>
+          </div>
+
+          <!-- Right: Active Lesson Attendance Grid -->
+          <div class="glass-panel" style="padding: 24px;" id="activeLessonRosterContainer">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h3 id="currentLessonTitle" style="font-size: 17px; font-weight: 700;">Dars davomati</h3>
+                <p id="currentLessonSubtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Darsni tanlang yoki yangisini qo'shing</p>
+              </div>
+              <div style="display: flex; gap: 10px;" id="rosterActionsContainer">
+                <button type="button" class="btn btn-secondary" onclick="markAllRosterPresent()" style="font-size: 12px; padding: 6px 12px;">
+                  ✅ Barchasini "Bor" qilish
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveCurrentLessonAttendance()" id="btnSaveRoster">
+                  💾 Saqlash
+                </button>
+              </div>
+            </div>
+
+            <div class="table-container" style="border: none; padding: 0;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">№</th>
+                    <th>Talaba F.I.Sh</th>
+                    <th>Kursi</th>
+                    <th>Telefon</th>
+                    <th style="text-align: center; width: 220px;">Davomat Holati</th>
+                    <th>Izoh (ixtiyoriy)</th>
+                  </tr>
+                </thead>
+                <tbody id="lessonRosterTableBody">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                      Dars tanlanmagan. Chap tarafdan darsni tanlang yoki yangi dars oching.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBVIEW B: Course Attendance Percentages & Results -->
+        <div id="attendanceResultsView" style="display: none;">
+          <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 20px;">
+            <div class="glass-panel metric-card">
+              <div class="metric-info">
+                <div class="label">Jami O'tkazilgan Darslar</div>
+                <div class="value" id="kpiTotalLessonsHeld">0</div>
+              </div>
+              <div class="metric-icon-box icon-blue">📚</div>
+            </div>
+            <div class="glass-panel metric-card">
+              <div class="metric-info">
+                <div class="label">To'garak Talabalari</div>
+                <div class="value" id="kpiClubStudentsCount">0</div>
+              </div>
+              <div class="metric-icon-box icon-emerald">👥</div>
+            </div>
+            <div class="glass-panel metric-card">
+              <div class="metric-info">
+                <div class="label">O'rtacha Qatnashish Foizi</div>
+                <div class="value" id="kpiAvgAttendancePct">0%</div>
+              </div>
+              <div class="metric-icon-box icon-amber">📈</div>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">№</th>
+                  <th>Talaba F.I.Sh</th>
+                  <th>Telefon</th>
+                  <th>Kursi</th>
+                  <th style="text-align: center;">Qatnashgan Darslar</th>
+                  <th>Qatnashish Foizi</th>
+                  <th style="text-align: center;">Bahosi / Natija</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceResultsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                    Ma'lumotlar yuklanmoqda...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. BROADCAST TAB -->
+      <section id="tab-broadcast" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title" data-i18n="broadcast_title">Xabar Yuborish (Telegram Bot)</h1>
+            <p class="page-desc" data-i18n="broadcast_desc">Admin sayt orqali yozadi va bot orqali ro'yxatdan o'tgan barcha talabalarga xabar boradi</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start;">
+          <!-- Broadcast Form -->
+          <div class="glass-panel" style="padding: 28px;">
+            <form id="broadcastForm">
+              <div class="form-group">
+                <label class="form-label">Kimlarga yuborilsin? (Qabul qiluvchilar) *</label>
+                <div style="display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;" id="broadcastTargetContainer">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13.5px;">
+                    <input type="radio" name="broadcastTarget" value="all" checked onchange="onBroadcastTargetChange()">
+                    <span>🌐 Barcha ro'yxatdan o'tgan talabalarga</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13.5px;">
+                    <input type="radio" name="broadcastTarget" value="club" onchange="onBroadcastTargetChange()">
+                    <span>🎯 Muayyan to'garak a'zolariga</span>
+                  </label>
+                </div>
+
+                <div id="broadcastClubSelectWrapper" style="display: none; margin-top: 10px;">
+                  <label class="form-label" for="broadcastClubSelect">To'garakni tanlang:</label>
+                  <select id="broadcastClubSelect" class="form-select" style="width: 100%;" onchange="updateBroadcastPreview()">
+                    <!-- Populated by JS -->
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="form-label" style="margin-bottom: 0;" for="broadcastMessageInput">Xabar matni *</label>
+                  <span id="broadcastCharCount" style="font-size: 11.5px; color: var(--text-muted);">0 / 4000</span>
+                </div>
+                <textarea 
+                  id="broadcastMessageInput" 
+                  class="form-textarea" 
+                  rows="7" 
+                  required 
+                  placeholder="Hurmatli talabalar! Ertaga soat 14:00 da..." 
+                  oninput="updateBroadcastPreview()"
+                ></textarea>
+                <small style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 6px;">
+                  💡 Xabar Telegram boti orqali to'g'ridan-to'g'ri barcha a'zolarning shaxsiy chatiga yetkaziladi.
+                </small>
+              </div>
+
+              <!-- Quick formatting pills -->
+              <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="insertBroadcastTag('📢 DIQQAT!')">📢 Diqqat</button>
+                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="insertBroadcastTag('🔔 Eslatma:')">🔔 Eslatma</button>
+                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="insertBroadcastTag('📅 Dars vaqti:')">📅 Dars vaqti</button>
+                <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="insertBroadcastTag('📍 Auditoriya:')">📍 Auditoriya</button>
+              </div>
+
+              <button type="submit" class="btn btn-primary" id="btnSubmitBroadcast" style="width: 100%; padding: 12px; font-size: 14px;">
+                <span data-i18n="btn_send_broadcast">🚀 Yuborish</span>
+              </button>
+            </form>
+
+            <div id="broadcastStatusBanner" style="margin-top: 18px; display: none;"></div>
+          </div>
+
+          <!-- Live Telegram Preview -->
+          <div class="glass-panel" style="padding: 24px;">
+            <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 14px;">📱 Telegram Jonli Ko'rinishi (Preview)</h3>
+            <div class="tg-preview-container">
+              <div class="tg-preview-bubble">
+                <div class="tg-preview-sender" id="tgPreviewSender">📢 UNIVERSITET MA'MURIYATI</div>
+                <div id="tgPreviewBody" style="white-space: pre-wrap; word-break: break-word;">
+                  Xabar matni bu yerda ko'rinadi...
+                </div>
+                <div class="tg-preview-time" id="tgPreviewTime">15:00</div>
+              </div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 14px; line-height: 1.5;">
+              Ushbu xabar Telegram orqali ro'yxatdan o'tgan foydalanuvchilarning shaxsiy Telegram botiga xuddi shu ko'rinishda yetkaziladi.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. TEACHERS MANAGEMENT TAB (Superadmin only) -->
+      <section id="tab-teachers" class="tab-pane" style="display: none;">
+        <div class="top-header">
+          <div>
+            <h1 class="page-title" data-i18n="teachers_title">O'qituvchilar Boshqaruvi</h1>
+            <p class="page-desc" data-i18n="teachers_desc">Admin har bir o‘qituvchi uchun alohida login va parol yaratadi. O‘qituvchiga faqat kerakli funksiyalar ochiladi</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="openTeacherModal()">
+              <span data-i18n="btn_add_teacher">+ Yangi O'qituvchi Qo'shish</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="glass-panel table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">№</th>
+                <th>O'qituvchi F.I.Sh</th>
+                <th>Login (Username)</th>
+                <th>Biriktirilgan To'garak</th>
+                <th>Holati</th>
+                <th>Yaratilgan Sana</th>
+                <th style="text-align: right;">Amallar</th>
+              </tr>
+            </thead>
+            <tbody id="teachersTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7. ACADEMIC TAB -->
       <section id="tab-academic" class="tab-pane" style="display: none;">
+
         <div class="top-header">
           <div>
             <h1 class="page-title" data-i18n="academic_title">Fakultet va Ta'lim Yo'nalishlari</h1>
@@ -560,9 +845,86 @@
     </div>
   </div>
 
+  <!-- MODAL: Teacher Create / Edit -->
+  <div id="teacherModal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="teacherModalTitle" style="font-size: 16px; font-weight: 700;">O'qituvchi Ma'lumotlari</h3>
+        <button class="btn-icon" onclick="closeTeacherModal()">&times;</button>
+      </div>
+      <form id="teacherForm">
+        <div class="modal-body">
+          <input type="hidden" id="teacherFormId">
+          <div class="form-group">
+            <label class="form-label" for="teacherFormFullName">O'qituvchi F.I.Sh *</label>
+            <input type="text" id="teacherFormFullName" class="form-input" style="width: 100%;" required placeholder="Dots. Olimov Aziz Anvarovich">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="teacherFormUsername">Tizimga Kirish Logini (Username) *</label>
+            <input type="text" id="teacherFormUsername" class="form-input" style="width: 100%;" required placeholder="olimov_aziz">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="teacherFormPassword" id="teacherFormPasswordLabel">Maxfiy Parol *</label>
+            <input type="password" id="teacherFormPassword" class="form-input" style="width: 100%;" placeholder="Kamida 6 belgi">
+            <small style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;" id="teacherFormPasswordHint">
+              O'qituvchi shu login va parol orqali tizimga kiradi
+            </small>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="teacherFormClubId">Biriktiriladigan To'garak *</label>
+            <select id="teacherFormClubId" class="form-select" style="width: 100%;" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+          <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="teacherFormIsActive" checked style="width: 16px; height: 16px;">
+            <label class="form-label" for="teacherFormIsActive" style="margin-bottom: 0; cursor: pointer;">Hisob faol holatda</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeTeacherModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Attendance Lesson Create -->
+  <div id="attendanceLessonModal" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="font-size: 16px; font-weight: 700;">Yangi Dars Davomatini Boshlash</h3>
+        <button class="btn-icon" onclick="closeAttendanceLessonModal()">&times;</button>
+      </div>
+      <form id="attendanceLessonForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="lessonModalClubId">To'garak *</label>
+            <select id="lessonModalClubId" class="form-select" style="width: 100%;" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lessonModalDate">Dars Sanasi *</label>
+            <input type="date" id="lessonModalDate" class="form-input" style="width: 100%;" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lessonModalTopic">Dars Mavzusi / Nomi (ixtiyoriy)</label>
+            <input type="text" id="lessonModalTopic" class="form-input" style="width: 100%;" placeholder="Masalan: 1-Mavzu: IELTS Speaking Practice">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAttendanceLessonModal()">Bekor qilish</button>
+          <button type="submit" class="btn btn-primary">Dars Davomatini Ochish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast notifications container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <script src="/static/js/app.js"></script>
 </body>
 </html>
+

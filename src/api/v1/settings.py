@@ -8,7 +8,7 @@ from src.repositories.settings_repo import SettingsRepository
 from src.services.notification_service import NotificationService
 from src.bot.bot_instance import get_bot
 from src.models.admin import Admin
-from src.api.deps import get_current_admin
+from src.api.deps import get_current_admin, require_superadmin
 
 router = APIRouter(prefix="/settings", tags=["System Settings"])
 
@@ -19,7 +19,7 @@ class ChannelUpdateRequest(BaseModel):
 
 @router.get("/channel")
 async def get_channel_setting(
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Retrieve the configured management Telegram channel ID or username."""
@@ -31,7 +31,7 @@ async def get_channel_setting(
 @router.put("/channel")
 async def update_channel_setting(
     data: ChannelUpdateRequest,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Update the management Telegram channel ID or username."""
@@ -43,7 +43,7 @@ async def update_channel_setting(
 @router.post("/test-channel")
 async def test_channel_notification(
     data: ChannelUpdateRequest,
-    current_admin: Admin = Depends(get_current_admin)
+    current_admin: Admin = Depends(require_superadmin)
 ):
     """Send a test message to the configured channel to verify bot write permissions."""
     bot = get_bot()

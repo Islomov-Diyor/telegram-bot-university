@@ -14,6 +14,7 @@ from src.core.database import create_tables
 from src.core.seed import seed_initial_data
 from src.api.v1 import api_v1_router
 from src.bot.bot_instance import get_bot, dp
+from src.services.reminder_service import run_reminder_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -23,12 +24,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 bot_task: asyncio.Task = None
+reminder_task: asyncio.Task = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown events."""
-    global bot_task
+    global bot_task, reminder_task
     logger.info("Initializing database tables and seed catalog...")
     await seed_initial_data()
 
@@ -43,9 +45,21 @@ async def lifespan(app: FastAPI):
             "Bot polling skipped. Admin Web Panel is running normally at http://localhost:8000"
         )
 
+    # Start automated reminder scheduler (scans class times and sends reminders)
+    logger.info("Starting automated lesson reminder scheduler...")
+    reminder_task = asyncio.create_task(run_reminder_scheduler(interval_seconds=900))
+
     yield
 
     # Shutdown
+    if reminder_task:
+        logger.info("Stopping reminder scheduler...")
+        reminder_task.cancel()
+        try:
+            await reminder_task
+        except asyncio.CancelledError:
+            pass
+
     if bot_task:
         logger.info("Stopping Telegram Bot polling...")
         bot_task.cancel()
@@ -57,6 +71,7 @@ async def lifespan(app: FastAPI):
     if bot:
         logger.info("Closing Telegram Bot session...")
         await bot.session.close()
+
 
 
 app = FastAPI(

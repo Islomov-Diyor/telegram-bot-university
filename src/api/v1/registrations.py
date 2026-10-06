@@ -27,6 +27,10 @@ async def list_registrations(
     """
     Retrieve registered students directory with filtering, queue positions, and searching.
     """
+    # Teacher scope enforcement
+    if current_admin.role == "teacher" and current_admin.club_id:
+        club_id = current_admin.club_id
+
     repo = RegistrationRepository(session)
     items, total = await repo.get_filtered(
         faculty_id=faculty_id,
@@ -55,7 +59,10 @@ async def get_recent_registrations(
 ) -> List[Dict[str, Any]]:
     """Retrieve recent student registrations for live dashboard display."""
     repo = RegistrationRepository(session)
-    return await repo.get_recent(limit=limit)
+    recent = await repo.get_recent(limit=limit)
+    if current_admin.role == "teacher" and current_admin.club_id:
+        recent = [r for r in recent if r.get("club_id") == current_admin.club_id]
+    return recent
 
 
 @router.delete("/{registration_id}")
@@ -69,6 +76,20 @@ async def delete_registration(
     If the cancelled student held an active spot, the next student on the waiting list
     is automatically promoted and notified via Telegram!
     """
+    repo = RegistrationRepository(session)
+    reg = await repo.get_by_id(registration_id)
+    if not reg:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="A'zolik topilmadi."
+        )
+
+    if current_admin.role == "teacher" and current_admin.club_id != reg.club_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="O'qituvchi boshqa to'garak a'zolarini o'chirish huquqiga ega emas."
+        )
+
     reg_service = RegistrationService(session=session)
     success, msg, promoted_info = await reg_service.cancel_registration(registration_id)
     if not success:
@@ -80,3 +101,4 @@ async def delete_registration(
         "message": msg,
         "promoted_student": promoted_info
     }
+

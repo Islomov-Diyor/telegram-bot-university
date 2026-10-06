@@ -68,5 +68,12 @@ async def create_tables():
                 if "language" not in columns:
                     sync_conn.execute(text("ALTER TABLE students ADD COLUMN language VARCHAR(10) DEFAULT 'uz'"))
 
+            # 4. admins table: club_id
+            if "admins" in inspector.get_table_names():
+                columns = [c["name"] for c in inspector.get_columns("admins")]
+                if "club_id" not in columns:
+                    sync_conn.execute(text("ALTER TABLE admins ADD COLUMN club_id INTEGER NULL"))
+
         await conn.run_sync(run_lightweight_migrations)
+
 

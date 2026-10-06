@@ -20,8 +20,11 @@ class AdminResponse(BaseModel):
     username: str
     full_name: str
     role: str
+    club_id: Optional[int] = None
+    club_name: Optional[str] = None
     telegram_chat_id: Optional[int] = None
     is_active: bool
+
 
 
 TokenResponse.model_rebuild()

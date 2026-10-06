@@ -5,6 +5,8 @@ from src.models.student import Student
 from src.models.registration import Registration
 from src.models.admin import Admin
 from src.models.system_setting import SystemSetting
+from src.models.attendance import AttendanceLesson, AttendanceRecord
+from src.models.reminder_log import ReminderLog
 
 __all__ = [
     "Faculty",
@@ -14,4 +16,8 @@ __all__ = [
     "Registration",
     "Admin",
     "SystemSetting",
+    "AttendanceLesson",
+    "AttendanceRecord",
+    "ReminderLog",
 ]
+

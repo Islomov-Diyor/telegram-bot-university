@@ -88,8 +88,34 @@ async function checkAuth() {
     const res = await apiFetch('/api/v1/auth/me');
     if (!res.ok) throw new Error('Not authenticated');
     const admin = await res.json();
+    window.currentUser = admin;
+
     document.getElementById('adminFullName').innerText = admin.full_name;
     document.getElementById('avatarLetter').innerText = admin.full_name.charAt(0).toUpperCase();
+
+    if (admin.role === 'teacher') {
+      const clubDesc = admin.club_name ? ` (${admin.club_name})` : '';
+      document.getElementById('adminRole').innerText = `O'qituvchi${clubDesc}`;
+
+      // Hide superadmin-only tabs
+      const navTeachers = document.getElementById('navTeachers');
+      if (navTeachers) navTeachers.style.display = 'none';
+      const navAcademic = document.getElementById('navAcademic');
+      if (navAcademic) navAcademic.style.display = 'none';
+      const navSettings = document.getElementById('navSettings');
+      if (navSettings) navSettings.style.display = 'none';
+
+      // Hide club creation button
+      const btnAddClub = document.querySelector('button[onclick="openClubModal()"]');
+      if (btnAddClub) btnAddClub.style.display = 'none';
+
+      if (['academic', 'settings', 'teachers'].includes(currentActiveTab)) {
+        currentActiveTab = 'attendance';
+      }
+    } else {
+      document.getElementById('adminRole').innerText = 'Super Admin';
+    }
+
     if (admin.telegram_chat_id) {
       document.getElementById('telegramChatIdInput').value = admin.telegram_chat_id;
     }
@@ -156,12 +182,19 @@ async function switchTab(tabName) {
     await loadClubs();
   } else if (tabName === 'students') {
     await fetchStudents();
+  } else if (tabName === 'attendance') {
+    await loadAttendanceTab();
+  } else if (tabName === 'broadcast') {
+    await loadBroadcastTab();
+  } else if (tabName === 'teachers') {
+    await loadTeachersTab();
   } else if (tabName === 'academic') {
     await loadAcademicTables();
   } else if (tabName === 'settings') {
     await loadChannelSettings();
   }
 }
+
 
 // Manual Refresh Button Action
 async function manualRefresh() {
@@ -918,4 +951,723 @@ function setupForms() {
       showToast(err.message, 'error');
     }
   });
+
+  // Broadcast Form Submit
+  const broadcastForm = document.getElementById('broadcastForm');
+  if (broadcastForm) {
+    broadcastForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = document.getElementById('broadcastMessageInput').value.trim();
+      if (!message) {
+        showToast('Iltimos xabar matnini kiriting', 'error');
+        return;
+      }
+
+      const target = document.querySelector('input[name="broadcastTarget"]:checked')?.value || 'all';
+      let clubId = null;
+      if (target === 'club') {
+        clubId = parseInt(document.getElementById('broadcastClubSelect').value);
+        if (!clubId) {
+          showToast('Iltimos to\'garakni tanlang', 'error');
+          return;
+        }
+      }
+
+      const targetDesc = target === 'all' 
+        ? "barcha ro'yxatdan o'tgan foydalanuvchilarga" 
+        : "tanlangan to'garak a'zolariga";
+      if (!confirm(`Xabarni ${targetDesc} Telegram bot orqali yuborishni tasdiqlaysizmi?`)) {
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitBroadcast');
+      const banner = document.getElementById('broadcastStatusBanner');
+      btn.disabled = true;
+      btn.innerText = 'Yuborilmoqda... ⏳';
+
+      try {
+        const res = await apiFetch('/api/v1/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, target, club_id: clubId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Xatolik');
+
+        showToast(data.message, 'success');
+        banner.style.display = 'block';
+        banner.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); padding: 14px; border-radius: var(--radius-md); color: #34D399; font-size: 13.5px;">
+            ✅ <b>Xabar muvaffaqiyatli yetkazildi!</b><br>
+            Jami: ${data.total} ta | Yetkazildi: ${data.sent} ta ${data.failed > 0 ? `| Xatolik: ${data.failed} ta` : ''}
+          </div>
+        `;
+        document.getElementById('broadcastMessageInput').value = '';
+        updateBroadcastPreview();
+      } catch (err) {
+        showToast(err.message, 'error');
+        banner.style.display = 'block';
+        banner.innerHTML = `
+          <div style="background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); padding: 14px; border-radius: var(--radius-md); color: #FB7185; font-size: 13.5px;">
+            ⚠️ ${err.message}
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🚀 Yuborish';
+      }
+    });
+  }
+
+  // Teacher Form Submit
+  const teacherForm = document.getElementById('teacherForm');
+  if (teacherForm) {
+    teacherForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('teacherFormId').value;
+      const fullName = document.getElementById('teacherFormFullName').value.trim();
+      const username = document.getElementById('teacherFormUsername').value.trim();
+      const password = document.getElementById('teacherFormPassword').value;
+      const clubIdVal = document.getElementById('teacherFormClubId').value;
+      const clubId = clubIdVal ? parseInt(clubIdVal) : null;
+      const isActive = document.getElementById('teacherFormIsActive').checked;
+
+      try {
+        let res;
+        if (id) {
+          const payload = { full_name: fullName, club_id: clubId, is_active: isActive };
+          if (password) payload.new_password = password;
+          res = await apiFetch(`/api/v1/teachers/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          if (!password) {
+            showToast('Iltimos yangi o\'qituvchi uchun parol kiriting', 'error');
+            return;
+          }
+          res = await apiFetch('/api/v1/teachers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, full_name: fullName, club_id: clubId })
+          });
+        }
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Xatolik');
+
+        showToast(id ? 'O\'qituvchi yangilandi' : 'Yangi o\'qituvchi muvaffaqiyatli yaratildi!', 'success');
+        closeTeacherModal();
+        await loadTeachersTab();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+
+  // Attendance Lesson Form Submit
+  const attendanceLessonForm = document.getElementById('attendanceLessonForm');
+  if (attendanceLessonForm) {
+    attendanceLessonForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const clubId = parseInt(document.getElementById('lessonModalClubId').value);
+      const lessonDate = document.getElementById('lessonModalDate').value;
+      const topic = document.getElementById('lessonModalTopic').value.trim();
+
+      try {
+        const res = await apiFetch('/api/v1/attendance/lessons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            club_id: clubId,
+            lesson_date: lessonDate,
+            topic: topic || null
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Darsni ochib bo\'lmadi');
+
+        showToast('Yangi dars davomati ochildi!', 'success');
+        closeAttendanceLessonModal();
+        currentAttendanceClubId = clubId;
+        const select = document.getElementById('attendanceClubSelect');
+        if (select) select.value = clubId;
+
+        await loadLessonsList();
+        if (data.id) {
+          await selectAttendanceLesson(data.id);
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
 }
+
+// ==========================================
+// 8. ATTENDANCE & RESULTS LOGIC
+// ==========================================
+let currentAttendanceClubId = null;
+let currentAttendanceLessonId = null;
+let currentLessonRoster = [];
+
+async function loadAttendanceTab() {
+  const select = document.getElementById('attendanceClubSelect');
+  if (!select) return;
+
+  if (!currentClubs || currentClubs.length === 0) {
+    const res = await apiFetch('/api/v1/clubs');
+    if (res.ok) currentClubs = await res.json();
+  }
+
+  select.innerHTML = '';
+  currentClubs.forEach(club => {
+    const opt = document.createElement('option');
+    opt.value = club.id;
+    opt.textContent = `${club.name} (${club.leader_name})`;
+    select.appendChild(opt);
+  });
+
+  if (window.currentUser && window.currentUser.role === 'teacher' && window.currentUser.club_id) {
+    select.value = window.currentUser.club_id;
+    select.disabled = true;
+  }
+
+  if (select.value) {
+    currentAttendanceClubId = parseInt(select.value);
+    await loadLessonsList();
+    await loadAttendanceResults();
+  }
+}
+
+async function onAttendanceClubChange() {
+  const select = document.getElementById('attendanceClubSelect');
+  if (!select) return;
+  currentAttendanceClubId = parseInt(select.value);
+  currentAttendanceLessonId = null;
+  await loadLessonsList();
+  await loadAttendanceResults();
+}
+
+function switchAttendanceSubView(view) {
+  const rosterView = document.getElementById('attendanceRosterView');
+  const resultsView = document.getElementById('attendanceResultsView');
+  const btnRoster = document.getElementById('btnSubnavRoster');
+  const btnResults = document.getElementById('btnSubnavResults');
+
+  if (view === 'roster') {
+    rosterView.style.display = 'grid';
+    resultsView.style.display = 'none';
+    btnRoster.classList.add('active');
+    btnResults.classList.remove('active');
+  } else {
+    rosterView.style.display = 'none';
+    resultsView.style.display = 'block';
+    btnRoster.classList.remove('active');
+    btnResults.classList.add('active');
+    loadAttendanceResults();
+  }
+}
+
+async function loadLessonsList() {
+  if (!currentAttendanceClubId) return;
+  const container = document.getElementById('lessonsListContainer');
+  const badge = document.getElementById('lessonsCountBadge');
+  if (!container) return;
+
+  try {
+    const res = await apiFetch(`/api/v1/attendance/lessons?club_id=${currentAttendanceClubId}`);
+    if (!res.ok) throw new Error('Darslarni yuklab bo\'lmadi');
+    const lessons = await res.json();
+
+    if (badge) badge.innerText = `${lessons.length} ta dars`;
+
+    if (lessons.length === 0) {
+      container.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">Hozircha darslar mavjud emas. Yuqoridagi "+ Yangi Dars Davomati" tugmasi orqali dars oching.</p>`;
+      document.getElementById('lessonRosterTableBody').innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Darslar mavjud emas. Yangi dars qo'shing.</td></tr>`;
+      currentAttendanceLessonId = null;
+      return;
+    }
+
+    container.innerHTML = '';
+    lessons.forEach((lesson, index) => {
+      const card = document.createElement('div');
+      card.className = `lesson-list-item ${lesson.id === currentAttendanceLessonId || (!currentAttendanceLessonId && index === 0) ? 'active' : ''}`;
+      card.onclick = () => selectAttendanceLesson(lesson.id);
+
+      card.innerHTML = `
+        <div>
+          <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">
+            📅 ${lesson.lesson_date}
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+            ${lesson.topic || 'Mavzusiz dars'}
+          </div>
+        </div>
+        <div style="display: flex; gap: 4px;">
+          <span class="badge badge-emerald" style="font-size: 10px;">${lesson.present_count} bor</span>
+          ${lesson.absent_count > 0 ? `<span class="badge badge-rose" style="font-size: 10px;">${lesson.absent_count} yo'q</span>` : ''}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    if (!currentAttendanceLessonId && lessons.length > 0) {
+      await selectAttendanceLesson(lessons[0].id);
+    }
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--accent-rose); font-size: 13px;">${err.message}</p>`;
+  }
+}
+
+async function selectAttendanceLesson(lessonId) {
+  currentAttendanceLessonId = lessonId;
+
+  document.querySelectorAll('.lesson-list-item').forEach(card => card.classList.remove('active'));
+  const tableBody = document.getElementById('lessonRosterTableBody');
+  tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Yuklanmoqda...</td></tr>`;
+
+  try {
+    const res = await apiFetch(`/api/v1/attendance/lessons/${lessonId}`);
+    if (!res.ok) throw new Error('Dars ro\'yxatini yuklab bo\'lmadi');
+    const data = await res.json();
+
+    const lesson = data.lesson;
+    document.getElementById('currentLessonTitle').innerText = `📅 Dars: ${lesson.lesson_date} — ${lesson.topic || 'Mavzusiz'}`;
+    document.getElementById('currentLessonSubtitle').innerText = `Jami talabalar: ${data.students.length} ta | Hozir: ${lesson.present_count} bor, ${lesson.absent_count} yo'q`;
+
+    currentLessonRoster = data.students;
+    renderLessonRosterTable();
+  } catch (err) {
+    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--accent-rose); padding: 20px;">${err.message}</td></tr>`;
+  }
+}
+
+function renderLessonRosterTable() {
+  const tableBody = document.getElementById('lessonRosterTableBody');
+  if (!tableBody) return;
+
+  if (currentLessonRoster.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Ushbu to'garakka a'zo bo'lgan faol talabalar topilmadi.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = '';
+  currentLessonRoster.forEach((student, idx) => {
+    const tr = document.createElement('tr');
+    tr.id = `roster-row-${student.student_id}`;
+
+    tr.innerHTML = `
+      <td style="color: var(--text-muted);">${idx + 1}</td>
+      <td style="font-weight: 600;">${student.full_name}</td>
+      <td><span class="badge badge-indigo">${student.course_level}-kurs</span></td>
+      <td style="color: var(--text-secondary);">${student.phone_number || '—'}</td>
+      <td style="text-align: center;">
+        <div class="status-btn-group">
+          <button type="button" class="status-btn ${student.status === 'present' ? 'active-present' : ''}" 
+                  onclick="setStudentAttendanceStatus(${student.student_id}, 'present')">
+            🟢 Bor
+          </button>
+          <button type="button" class="status-btn ${student.status === 'absent' ? 'active-absent' : ''}" 
+                  onclick="setStudentAttendanceStatus(${student.student_id}, 'absent')">
+            🔴 Yo'q
+          </button>
+          <button type="button" class="status-btn ${student.status === 'excused' ? 'active-excused' : ''}" 
+                  onclick="setStudentAttendanceStatus(${student.student_id}, 'excused')">
+            🟡 Sababli
+          </button>
+        </div>
+      </td>
+      <td>
+        <input type="text" class="form-input" style="font-size: 12px; padding: 4px 8px; width: 100%;" 
+               placeholder="Izoh..." value="${student.notes || ''}" 
+               onchange="setStudentAttendanceNotes(${student.student_id}, this.value)">
+      </td>
+    `;
+    tableBody.appendChild(tr);
+  });
+}
+
+function setStudentAttendanceStatus(studentId, status) {
+  const s = currentLessonRoster.find(item => item.student_id === studentId);
+  if (s) {
+    s.status = status;
+    const row = document.getElementById(`roster-row-${studentId}`);
+    if (row) {
+      const btns = row.querySelectorAll('.status-btn');
+      btns[0].className = `status-btn ${status === 'present' ? 'active-present' : ''}`;
+      btns[1].className = `status-btn ${status === 'absent' ? 'active-absent' : ''}`;
+      btns[2].className = `status-btn ${status === 'excused' ? 'active-excused' : ''}`;
+    }
+  }
+}
+
+function setStudentAttendanceNotes(studentId, notes) {
+  const s = currentLessonRoster.find(item => item.student_id === studentId);
+  if (s) s.notes = notes.trim();
+}
+
+function markAllRosterPresent() {
+  currentLessonRoster.forEach(s => s.status = 'present');
+  renderLessonRosterTable();
+  showToast('Barcha talabalar "Bor" deb belgilandi', 'success');
+}
+
+async function saveCurrentLessonAttendance() {
+  if (!currentAttendanceLessonId) {
+    showToast('Dars tanlanmagan', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSaveRoster');
+  btn.disabled = true;
+  btn.innerText = 'Saqlanmoqda...';
+
+  try {
+    const payload = {
+      records: currentLessonRoster.map(s => ({
+        student_id: s.student_id,
+        status: s.status,
+        notes: s.notes || null
+      }))
+    };
+
+    const res = await apiFetch(`/api/v1/attendance/lessons/${currentAttendanceLessonId}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error('Davomatni saqlab bo\'lmadi');
+    showToast('Davomat muvaffaqiyatli saqlandi!', 'success');
+    await loadLessonsList();
+    await loadAttendanceResults();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '💾 Saqlash';
+  }
+}
+
+function openAttendanceLessonModal() {
+  const modal = document.getElementById('attendanceLessonModal');
+  const clubSelect = document.getElementById('lessonModalClubId');
+  const dateInput = document.getElementById('lessonModalDate');
+  const topicInput = document.getElementById('lessonModalTopic');
+
+  clubSelect.innerHTML = '';
+  currentClubs.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    clubSelect.appendChild(opt);
+  });
+
+  if (currentAttendanceClubId) {
+    clubSelect.value = currentAttendanceClubId;
+  }
+  if (window.currentUser && window.currentUser.role === 'teacher' && window.currentUser.club_id) {
+    clubSelect.value = window.currentUser.club_id;
+    clubSelect.disabled = true;
+  }
+
+  dateInput.value = new Date().toISOString().split('T')[0];
+  topicInput.value = '';
+  modal.classList.add('active');
+}
+
+function closeAttendanceLessonModal() {
+  document.getElementById('attendanceLessonModal').classList.remove('active');
+}
+
+async function loadAttendanceResults() {
+  if (!currentAttendanceClubId) return;
+  const tbody = document.getElementById('attendanceResultsTableBody');
+  if (!tbody) return;
+
+  try {
+    const res = await apiFetch(`/api/v1/attendance/results?club_id=${currentAttendanceClubId}`);
+    if (!res.ok) throw new Error('Natijalarni yuklab bo\'lmadi');
+    const data = await res.json();
+
+    document.getElementById('kpiTotalLessonsHeld').innerText = data.total_lessons_held;
+    document.getElementById('kpiClubStudentsCount').innerText = data.students_summary.length;
+
+    const avgPct = data.students_summary.length > 0 
+      ? Math.round(data.students_summary.reduce((acc, s) => acc + s.attendance_percentage, 0) / data.students_summary.length)
+      : 0;
+    document.getElementById('kpiAvgAttendancePct').innerText = `${avgPct}%`;
+
+    if (data.students_summary.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Talabalar mavjud emas.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = '';
+    data.students_summary.forEach((student, idx) => {
+      const pct = student.attendance_percentage;
+      let colorClass = 'green';
+      let badgeClass = 'badge-emerald';
+      if (pct < 60) {
+        colorClass = 'red';
+        badgeClass = 'badge-rose';
+      } else if (pct < 75) {
+        colorClass = 'amber';
+        badgeClass = 'badge-amber';
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color: var(--text-muted);">${idx + 1}</td>
+        <td style="font-weight: 700;">${student.full_name}</td>
+        <td style="color: var(--text-secondary);">${student.phone_number || '—'}</td>
+        <td><span class="badge badge-indigo">${student.course_level}-kurs</span></td>
+        <td style="text-align: center; font-weight: 600;">
+          ${student.attended_lessons} / ${student.total_lessons}
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="progress-track">
+              <div class="progress-fill ${colorClass}" style="width: ${pct}%;"></div>
+            </div>
+            <span style="font-weight: 700; font-size: 12.5px;">${pct}%</span>
+          </div>
+        </td>
+        <td style="text-align: center;">
+          <span class="badge ${badgeClass}">${student.grade_label}</span>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-rose); padding: 20px;">${err.message}</td></tr>`;
+  }
+}
+
+function downloadAttendanceExcel() {
+  if (!currentAttendanceClubId) {
+    showToast('To\'garak tanlanmagan', 'error');
+    return;
+  }
+  window.open(`/api/v1/attendance/export?club_id=${currentAttendanceClubId}`, '_blank');
+}
+
+async function triggerClubReminderFromAttendance() {
+  if (!currentAttendanceClubId) return;
+  const club = currentClubs.find(c => c.id === currentAttendanceClubId);
+  const clubName = club ? club.name : 'ushbu to\'garak';
+
+  if (!confirm(`“${clubName}” a'zolariga Telegram orqali bugungi mashg‘ulot eslatmasini yuborishni tasdiqlaysizmi?`)) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/api/v1/clubs/${currentAttendanceClubId}/remind`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Eslatma yuborishda xatolik');
+    showToast(data.message, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ==========================================
+// 9. BROADCAST LOGIC
+// ==========================================
+async function loadBroadcastTab() {
+  const select = document.getElementById('broadcastClubSelect');
+  if (!select) return;
+
+  if (!currentClubs || currentClubs.length === 0) {
+    const res = await apiFetch('/api/v1/clubs');
+    if (res.ok) currentClubs = await res.json();
+  }
+
+  select.innerHTML = '';
+  currentClubs.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    select.appendChild(opt);
+  });
+
+  if (window.currentUser && window.currentUser.role === 'teacher') {
+    const radioClub = document.querySelector('input[name="broadcastTarget"][value="club"]');
+    if (radioClub) radioClub.checked = true;
+    const targetContainer = document.getElementById('broadcastTargetContainer');
+    if (targetContainer) targetContainer.style.display = 'none';
+
+    document.getElementById('broadcastClubSelectWrapper').style.display = 'block';
+    select.value = window.currentUser.club_id;
+    select.disabled = true;
+  }
+
+  updateBroadcastPreview();
+}
+
+function onBroadcastTargetChange() {
+  const isClub = document.querySelector('input[name="broadcastTarget"]:checked')?.value === 'club';
+  document.getElementById('broadcastClubSelectWrapper').style.display = isClub ? 'block' : 'none';
+  updateBroadcastPreview();
+}
+
+function updateBroadcastPreview() {
+  const text = document.getElementById('broadcastMessageInput').value;
+  const charCount = document.getElementById('broadcastCharCount');
+  const previewBody = document.getElementById('tgPreviewBody');
+  const previewSender = document.getElementById('tgPreviewSender');
+  const previewTime = document.getElementById('tgPreviewTime');
+
+  if (charCount) charCount.innerText = `${text.length} / 4000`;
+  if (previewBody) {
+    previewBody.innerText = text.trim() ? text : 'Xabar matni bu yerda ko\'rinadi...';
+  }
+
+  const isClub = document.querySelector('input[name="broadcastTarget"]:checked')?.value === 'club';
+  if (isClub) {
+    const select = document.getElementById('broadcastClubSelect');
+    const selectedClub = currentClubs.find(c => c.id == select.value);
+    previewSender.innerText = selectedClub ? `📢 ${selectedClub.name.toUpperCase()}` : '📢 TO\'GARAK XABARI';
+  } else {
+    previewSender.innerText = '📢 UNIVERSITET MA\'MURIYATI';
+  }
+
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  if (previewTime) previewTime.innerText = `${hh}:${mm}`;
+}
+
+function insertBroadcastTag(tag) {
+  const textarea = document.getElementById('broadcastMessageInput');
+  textarea.value = (textarea.value ? textarea.value + '\n' : '') + tag + ' ';
+  textarea.focus();
+  updateBroadcastPreview();
+}
+
+// ==========================================
+// 10. TEACHERS MANAGEMENT LOGIC
+// ==========================================
+let allTeachers = [];
+
+async function loadTeachersTab() {
+  const tbody = document.getElementById('teachersTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Yuklanmoqda...</td></tr>`;
+
+  try {
+    const res = await apiFetch('/api/v1/teachers');
+    if (!res.ok) throw new Error('O\'qituvchilar ro\'yxatini yuklab bo\'lmadi');
+    allTeachers = await res.json();
+
+    if (allTeachers.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Hozircha o'qituvchilar hisoblari yaratilmagan. Yuqoridagi "+ Yangi O'qituvchi Qo'shish" tugmasini bosing.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = '';
+    allTeachers.forEach((teacher, idx) => {
+      const createdDate = teacher.created_at ? new Date(teacher.created_at).toLocaleDateString() : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color: var(--text-muted);">${idx + 1}</td>
+        <td style="font-weight: 700;">${teacher.full_name}</td>
+        <td><code style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: #818CF8;">${teacher.username}</code></td>
+        <td><span class="badge badge-indigo">${teacher.club_name || 'To\'garak biriktirilmagan'}</span></td>
+        <td>
+          <span class="badge ${teacher.is_active ? 'badge-emerald' : 'badge-rose'}">
+            ${teacher.is_active ? 'Faol' : 'Nofaol'}
+          </span>
+        </td>
+        <td style="color: var(--text-secondary);">${createdDate}</td>
+        <td style="text-align: right;">
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="openTeacherModal(${teacher.id})">
+              Tahrirlash
+            </button>
+            <button class="btn btn-danger" style="font-size: 11px; padding: 4px 10px;" onclick="deleteTeacher(${teacher.id}, '${teacher.full_name}')">
+              O'chirish
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-rose); padding: 20px;">${err.message}</td></tr>`;
+  }
+}
+
+function openTeacherModal(teacherId = null) {
+  const modal = document.getElementById('teacherModal');
+  const clubSelect = document.getElementById('teacherFormClubId');
+
+  clubSelect.innerHTML = '<option value="">To\'garakni tanlang</option>';
+  currentClubs.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.name} (${c.leader_name})`;
+    clubSelect.appendChild(opt);
+  });
+
+  const pwdInput = document.getElementById('teacherFormPassword');
+  const pwdLabel = document.getElementById('teacherFormPasswordLabel');
+  const pwdHint = document.getElementById('teacherFormPasswordHint');
+
+  if (teacherId) {
+    const teacher = allTeachers.find(t => t.id === teacherId);
+    if (!teacher) return;
+    document.getElementById('teacherModalTitle').innerText = 'O\'qituvchini Tahrirlash';
+    document.getElementById('teacherFormId').value = teacher.id;
+    document.getElementById('teacherFormFullName').value = teacher.full_name;
+    document.getElementById('teacherFormUsername').value = teacher.username;
+    document.getElementById('teacherFormUsername').disabled = true;
+    clubSelect.value = teacher.club_id || '';
+    pwdInput.value = '';
+    pwdInput.required = false;
+    pwdLabel.innerText = 'Yangi Parol (ixtiyoriy)';
+    pwdHint.innerText = 'Agar parolni o\'zgartirmoqchi bo\'lsangiz, yangi parol kiriting';
+    document.getElementById('teacherFormIsActive').checked = teacher.is_active;
+  } else {
+    document.getElementById('teacherModalTitle').innerText = 'Yangi O\'qituvchi Qo\'shish';
+    document.getElementById('teacherFormId').value = '';
+    document.getElementById('teacherFormFullName').value = '';
+    document.getElementById('teacherFormUsername').value = '';
+    document.getElementById('teacherFormUsername').disabled = false;
+    clubSelect.value = '';
+    pwdInput.value = '';
+    pwdInput.required = true;
+    pwdLabel.innerText = 'Maxfiy Parol *';
+    pwdHint.innerText = 'O\'qituvchi shu login va parol orqali tizimga kiradi';
+    document.getElementById('teacherFormIsActive').checked = true;
+  }
+
+  modal.classList.add('active');
+}
+
+function closeTeacherModal() {
+  document.getElementById('teacherModal').classList.remove('active');
+}
+
+async function deleteTeacher(teacherId, teacherName) {
+  if (!confirm(`Haqiqatan ham o‘qituvchi “${teacherName}” hisobini o‘chirmoqchimisiz?`)) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/api/v1/teachers/${teacherId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('O\'chirib bo\'lmadi');
+    showToast('O\'qituvchi muvaffaqiyatli o\'chirildi', 'success');
+    await loadTeachersTab();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+

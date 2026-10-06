@@ -7,7 +7,7 @@ from src.repositories.direction_repo import DirectionRepository
 from src.repositories.faculty_repo import FacultyRepository
 from src.schemas.direction import DirectionCreate, DirectionUpdate, DirectionResponse
 from src.models.admin import Admin
-from src.api.deps import get_current_admin
+from src.api.deps import get_current_admin, require_superadmin
 
 router = APIRouter(prefix="/directions", tags=["Direction Management"])
 
@@ -27,7 +27,7 @@ async def list_directions(
 @router.post("", response_model=DirectionResponse, status_code=status.HTTP_201_CREATED)
 async def create_direction(
     data: DirectionCreate,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Create a new study direction under a faculty."""
@@ -62,7 +62,7 @@ async def create_direction(
 async def update_direction(
     direction_id: int,
     data: DirectionUpdate,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Update study direction details."""
@@ -95,7 +95,7 @@ async def update_direction(
 @router.delete("/{direction_id}")
 async def delete_direction(
     direction_id: int,
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Delete a study direction."""

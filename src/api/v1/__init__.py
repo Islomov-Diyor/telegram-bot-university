@@ -7,6 +7,9 @@ from src.api.v1.clubs import router as clubs_router
 from src.api.v1.registrations import router as registrations_router
 from src.api.v1.export import router as export_router
 from src.api.v1.settings import router as settings_router
+from src.api.v1.broadcast import router as broadcast_router
+from src.api.v1.teachers import router as teachers_router
+from src.api.v1.attendance import router as attendance_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -18,3 +21,7 @@ api_v1_router.include_router(clubs_router)
 api_v1_router.include_router(registrations_router)
 api_v1_router.include_router(export_router)
 api_v1_router.include_router(settings_router)
+api_v1_router.include_router(broadcast_router)
+api_v1_router.include_router(teachers_router)
+api_v1_router.include_router(attendance_router)
+

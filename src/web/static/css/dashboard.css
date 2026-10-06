@@ -713,3 +713,161 @@ body {
   .main-content { margin-left: 0; padding: 20px; }
 }
 
+/* Attendance & Broadcast Specific Components */
+.status-btn-group {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.status-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.status-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.status-btn.active-present {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.status-btn.active-absent {
+  background: rgba(244, 63, 94, 0.25);
+  color: #FB7185;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+.status-btn.active-excused {
+  background: rgba(245, 158, 11, 0.25);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* Progress bar for course attendance */
+.progress-track {
+  width: 100%;
+  max-width: 140px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.progress-fill.green { background: linear-gradient(90deg, #10B981, #34D399); }
+.progress-fill.amber { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.progress-fill.red { background: linear-gradient(90deg, #F43F5E, #FB7185); }
+
+/* Telegram Live Preview Container */
+.tg-preview-container {
+  background: #17212B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  max-width: 480px;
+  font-family: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif;
+  box-shadow: var(--shadow-md);
+}
+
+.tg-preview-bubble {
+  background: #182533;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #F5F5F5;
+  font-size: 13.5px;
+  line-height: 1.5;
+  border-bottom-left-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tg-preview-sender {
+  font-weight: 600;
+  color: #64B5F6;
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.tg-preview-time {
+  text-align: right;
+  font-size: 10px;
+  color: #708499;
+  margin-top: 6px;
+}
+
+/* Sub-navigation tabs (e.g. in Attendance) */
+.subnav-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.subnav-pill {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.subnav-pill:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.subnav-pill.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818CF8;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Lesson selection list */
+.lesson-list-item {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(23, 30, 49, 0.5);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lesson-list-item:hover {
+  background: rgba(30, 41, 67, 0.7);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.lesson-list-item.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: var(--accent-primary);
+}
+
+

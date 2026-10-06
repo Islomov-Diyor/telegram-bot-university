@@ -81,17 +81,26 @@ async def login(
         samesite="lax"
     )
 
+    def build_admin_response(adm: Admin) -> AdminResponse:
+        res = AdminResponse.model_validate(adm)
+        if adm.club:
+            res.club_name = adm.club.name
+        return res
+
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        admin=AdminResponse.model_validate(admin)
+        admin=build_admin_response(admin)
     )
 
 
 @router.get("/me", response_model=AdminResponse)
 async def get_me(current_admin: Admin = Depends(get_current_admin)):
     """Retrieve details of the currently authenticated administrator."""
-    return AdminResponse.model_validate(current_admin)
+    res = AdminResponse.model_validate(current_admin)
+    if current_admin.club:
+        res.club_name = current_admin.club.name
+    return res
 
 
 @router.put("/telegram-chat-id", response_model=AdminResponse)
@@ -104,7 +113,11 @@ async def update_telegram_chat_id(
     current_admin.telegram_chat_id = data.telegram_chat_id
     await session.commit()
     await session.refresh(current_admin)
-    return AdminResponse.model_validate(current_admin)
+    res = AdminResponse.model_validate(current_admin)
+    if current_admin.club:
+        res.club_name = current_admin.club.name
+    return res
+
 
 
 @router.post("/logout")

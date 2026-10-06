@@ -57,3 +57,31 @@ async def get_current_admin(
         )
 
     return admin
+
+
+async def require_superadmin(
+    current_admin: Admin = Depends(get_current_admin)
+) -> Admin:
+    """Ensure currently authenticated admin has superadmin role."""
+    if current_admin.role != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ushbu amalni bajarish uchun faqat Bosh Administrator (Superadmin) huquqi talab qilinadi."
+        )
+    return current_admin
+
+
+def check_club_access(current_admin: Admin, club_id: int):
+    """
+    Ensure the admin has permission to manage the specified club.
+    Superadmins can access all clubs. Teachers can only access their assigned club.
+    """
+    if current_admin.role == "superadmin":
+        return
+    if current_admin.role == "teacher" and current_admin.club_id == club_id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Sizda ushbu to'garakka kirish yoki ma'lumotlarini o'zgartirish huquqi yo'q."
+    )
+
