@@ -30,34 +30,34 @@
       </div>
 
       <ul class="nav-menu">
-        <li>
+        <li id="navDashboard">
           <a class="nav-item active" data-tab="dashboard">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
             <span data-i18n="nav_dashboard">Dashboard</span>
           </a>
         </li>
-        <li>
+        <li id="navClubs">
           <a class="nav-item" data-tab="clubs">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-            <span data-i18n="nav_clubs">To'garaklar</span>
+            <span data-i18n="nav_clubs" id="navClubsText">To'garaklar</span>
           </a>
         </li>
-        <li>
+        <li id="navStudents">
           <a class="nav-item" data-tab="students">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            <span data-i18n="nav_students">Iqtidorli Talabalar</span>
+            <span data-i18n="nav_students" id="navStudentsText">Iqtidorli Talabalar</span>
           </a>
         </li>
-        <li>
+        <li id="navAttendance">
           <a class="nav-item" data-tab="attendance">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
             <span data-i18n="nav_attendance">Davomat & Natija</span>
           </a>
         </li>
-        <li>
+        <li id="navBroadcast">
           <a class="nav-item" data-tab="broadcast">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-            <span data-i18n="nav_broadcast">Xabar Yuborish</span>
+            <span data-i18n="nav_broadcast" id="navBroadcastText">Xabar Yuborish</span>
           </a>
         </li>
         <li id="navTeachers">
@@ -204,17 +204,17 @@
       <section id="tab-clubs" class="tab-pane" style="display: none;">
         <div class="top-header">
           <div>
-            <h1 class="page-title" data-i18n="clubs_title">To'garaklar Boshqaruvi</h1>
-            <p class="page-desc" data-i18n="clubs_desc">Mavjud to'garaklar, sig'imlar, qabul muddatlari va rahbarlarini boshqarish</p>
+            <h1 class="page-title" data-i18n="clubs_title" id="clubsPageTitle">To'garaklar Boshqaruvi</h1>
+            <p class="page-desc" data-i18n="clubs_desc" id="clubsPageDesc">Mavjud to'garaklar, sig'imlar, qabul muddatlari va rahbarlarini boshqarish</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-primary" onclick="openClubModal()">
+            <button class="btn btn-primary" onclick="openClubModal()" id="btnAddClubHeader">
               <span data-i18n="btn_add_club">+ Yangi to'garak ochish</span>
             </button>
           </div>
         </div>
 
-        <div class="glass-panel filter-toolbar">
+        <div class="glass-panel filter-toolbar" id="clubFilterToolbar">
           <div class="filter-group">
             <select id="clubFilterFaculty" class="form-select" onchange="filterClubs()">
               <option value="" data-i18n="filter_all_faculties">Barcha fakultetlar</option>
@@ -232,8 +232,8 @@
       <section id="tab-students" class="tab-pane" style="display: none;">
         <div class="top-header">
           <div>
-            <h1 class="page-title" data-i18n="students_title">Iqtidorli Talabalar Ro'yxati</h1>
-            <p class="page-desc" data-i18n="students_desc">To'garaklarga a'zo bo'lgan va zaxira navbatidagi talabalar jurnali</p>
+            <h1 class="page-title" data-i18n="students_title" id="studentsPageTitle">Iqtidorli Talabalar Ro'yxati</h1>
+            <p class="page-desc" data-i18n="students_desc" id="studentsPageDesc">To'garaklarga a'zo bo'lgan va zaxira navbatidagi talabalar jurnali</p>
           </div>
           <div class="header-actions">
             <a id="btnExportExcel" class="btn btn-success" href="/api/v1/export/excel" target="_blank">
@@ -251,7 +251,7 @@
             <input type="text" id="studentSearchInput" data-i18n-placeholder="search_student_placeholder" placeholder="Talaba F.I.Sh, tel yoki @username..." oninput="debounceStudentSearch()">
           </div>
 
-          <div class="filter-group">
+          <div class="filter-group" id="studentFilterGroup">
             <select id="studentFilterFaculty" class="form-select" onchange="onStudentFacultyChange()">
               <option value="" data-i18n="filter_all_faculties">Barcha fakultetlar</option>
             </select>

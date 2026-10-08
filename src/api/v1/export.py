@@ -25,6 +25,9 @@ async def export_to_excel(
     """
     Export students data to Microsoft Excel (.xlsx) file with professional table styling (Requirement 15).
     """
+    if current_admin.role == "teacher":
+        club_id = current_admin.club_id
+
     repo = RegistrationRepository(session)
     items = await repo.get_all_for_export(
         club_id=club_id,
@@ -56,6 +59,9 @@ async def export_to_csv(
     """
     Export students data to CSV format with UTF-8 BOM encoding for complete Uzbek character compatibility (Requirement 15).
     """
+    if current_admin.role == "teacher":
+        club_id = current_admin.club_id
+
     repo = RegistrationRepository(session)
     items = await repo.get_all_for_export(
         club_id=club_id,

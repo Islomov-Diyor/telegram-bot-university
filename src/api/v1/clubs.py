@@ -28,8 +28,11 @@ async def list_clubs(
     """Retrieve clubs. Teachers only receive their assigned club."""
     repo = ClubRepository(session)
     items = await repo.get_all_with_stats(faculty_id=faculty_id, direction_id=direction_id)
-    if current_admin.role == "teacher" and current_admin.club_id:
-        items = [c for c in items if c.id == current_admin.club_id]
+    if current_admin.role == "teacher":
+        if current_admin.club_id:
+            items = [c for c in items if (c.get("id") if isinstance(c, dict) else getattr(c, "id", None)) == current_admin.club_id]
+        else:
+            items = []
     return items
 
 

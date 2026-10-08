@@ -10,14 +10,14 @@ from src.models.club import Club
 from src.models.student import Student
 from src.models.registration import Registration
 from src.models.admin import Admin
-from src.api.deps import get_current_admin
+from src.api.deps import require_superadmin
 
 router = APIRouter(prefix="/stats", tags=["Dashboard Statistics"])
 
 
 @router.get("/overview")
 async def get_dashboard_overview(
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """Retrieve summarized analytics for the admin dashboard."""

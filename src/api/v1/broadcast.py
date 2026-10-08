@@ -91,11 +91,20 @@ async def send_broadcast(
         )
 
     # Format broadcast message
-    header = f"📢 <b>{club_title.upper()} TO'GARAGI XABARNOMASI</b>" if club_title else "📢 <b>UNIVERSITET MA'MURIYATI XABARNOMASI</b>"
-    formatted_text = (
+    import html
+    safe_title = html.escape(club_title.upper()) if club_title else ""
+    header = f"📢 <b>{safe_title} TO'GARAGI XABARNOMASI</b>" if safe_title else "📢 <b>UNIVERSITET MA'MURIYATI XABARNOMASI</b>"
+    safe_body = html.escape(data.message.strip())
+    formatted_html = (
         f"{header}\n\n"
-        f"{data.message.strip()}\n\n"
+        f"{safe_body}\n\n"
         "<i>— Universitet Iqtidorli Talabalar Tizimi</i>"
+    )
+    plain_header = f"📢 {club_title.upper()} TO'GARAGI XABARNOMASI" if club_title else "📢 UNIVERSITET MA'MURIYATI XABARNOMASI"
+    plain_text = (
+        f"{plain_header}\n\n"
+        f"{data.message.strip()}\n\n"
+        "— Universitet Iqtidorli Talabalar Tizimi"
     )
 
     sent = 0
@@ -104,14 +113,24 @@ async def send_broadcast(
     if bot:
         for cid in chat_ids:
             try:
-                await asyncio.wait_for(
-                    bot.send_message(
-                        chat_id=cid,
-                        text=formatted_text,
-                        parse_mode="HTML"
-                    ),
-                    timeout=5.0
-                )
+                try:
+                    await asyncio.wait_for(
+                        bot.send_message(
+                            chat_id=cid,
+                            text=formatted_html,
+                            parse_mode="HTML"
+                        ),
+                        timeout=5.0
+                    )
+                except Exception:
+                    await asyncio.wait_for(
+                        bot.send_message(
+                            chat_id=cid,
+                            text=plain_text,
+                            parse_mode=None
+                        ),
+                        timeout=5.0
+                    )
                 sent += 1
                 await asyncio.sleep(0.04)  # Safe throttling for Telegram API limits
             except Exception as e:
@@ -121,13 +140,15 @@ async def send_broadcast(
         # In testing or when bot token is not configured
         sent = total
 
-
-    msg_summary = f"Xabar {sent} ta foydalanuvchiga muvaffaqiyatli yetkazildi."
-    if failed > 0:
-        msg_summary += f" ({failed} ta xatolik)"
+    if sent > 0:
+        msg_summary = f"Xabar {sent} ta foydalanuvchiga muvaffaqiyatli yetkazildi."
+        if failed > 0:
+            msg_summary += f" ({failed} ta xatolik)"
+    else:
+        msg_summary = f"Xabar hech bir foydalanuvchiga yetkazilmadi ({failed} ta xatolik, botga ulanmagan)."
 
     return BroadcastResponse(
-        success=True,
+        success=sent > 0 or total == 0,
         total=total,
         sent=sent,
         failed=failed,

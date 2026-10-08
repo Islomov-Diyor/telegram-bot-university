@@ -13,7 +13,7 @@ router = APIRouter(prefix="/faculties", tags=["Faculty Management"])
 
 @router.get("", response_model=List[FacultyResponse])
 async def list_faculties(
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Retrieve all faculties with active directions count."""

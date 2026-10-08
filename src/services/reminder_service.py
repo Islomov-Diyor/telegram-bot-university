@@ -89,37 +89,70 @@ class ReminderService:
             chat_ids = [cid for cid in reg_res.scalars().all() if cid]
 
             total = len(chat_ids)
+            if total == 0:
+                return {
+                    "success": True,
+                    "club_id": club.id,
+                    "club_name": club.name,
+                    "total": 0,
+                    "sent": 0,
+                    "failed": 0,
+                    "message": f"\"{club.name}\" to'garagida hozircha ro'yxatdan o'tgan faol talabalar mavjud emas."
+                }
+
             sent = 0
             failed = 0
 
-            # 3. Format message
-            msg_text = (
+            # 3. Format message with HTML and plain text fallback
+            import html
+            safe_name = html.escape(club.name)
+            safe_time = html.escape(club.schedule_time or "Belgilangan vaqtda")
+            safe_room = html.escape(club.room_location or "Belgilanmagan")
+            safe_leader = html.escape(club.leader_name or "Belgilanmagan")
+            safe_contact = html.escape(club.leader_contact or "Mavjud emas")
+
+            html_text = (
                 "🔔 <b>ESLATMA</b>\n\n"
-                f"Bugun soat <b>{club.schedule_time}</b> da <b>“{club.name}”</b> mashg‘uloti bor.\n\n"
-                f"📍 <b>Auditoriya:</b> {club.room_location}\n"
-                f"👨‍🏫 <b>Rahbar:</b> {club.leader_name}\n"
-                f"📞 <b>Aloqa:</b> {club.leader_contact}\n"
+                f"Bugun soat <b>{safe_time}</b> da <b>\"{safe_name}\"</b> mashg‘uloti bor.\n\n"
+                f"📍 <b>Auditoriya:</b> {safe_room}\n"
+                f"👨‍🏫 <b>Rahbar:</b> {safe_leader}\n"
+                f"📞 <b>Aloqa:</b> {safe_contact}\n"
+            )
+            plain_text = (
+                "🔔 ESLATMA\n\n"
+                f"Bugun soat {club.schedule_time} da \"{club.name}\" mashg‘uloti bor.\n\n"
+                f"📍 Auditoriya: {club.room_location}\n"
+                f"👨‍🏫 Rahbar: {club.leader_name}\n"
+                f"📞 Aloqa: {club.leader_contact}\n"
             )
             if custom_note:
-                msg_text += f"\n💬 <i>Qo'shimcha: {custom_note.strip()}</i>\n"
+                safe_note = html.escape(custom_note.strip())
+                html_text += f"\n💬 <i>Qo'shimcha: {safe_note}</i>\n"
+                plain_text += f"\n💬 Qo'shimcha: {custom_note.strip()}\n"
 
-            msg_text += "\n<i>Mashg‘ulotga o‘z vaqtida kelishingizni so‘raymiz!</i>"
+            html_text += "\n<i>Mashg‘ulotga o‘z vaqtida kelishingizni so‘raymiz!</i>"
+            plain_text += "\nMashg‘ulotga o‘z vaqtida kelishingizni so‘raymiz!"
 
             # 4. Send messages
             if bot and chat_ids:
                 for cid in chat_ids:
                     try:
-                        await asyncio.wait_for(
-                            bot.send_message(chat_id=cid, text=msg_text, parse_mode="HTML"),
-                            timeout=5.0
-                        )
+                        try:
+                            await asyncio.wait_for(
+                                bot.send_message(chat_id=cid, text=html_text, parse_mode="HTML"),
+                                timeout=5.0
+                            )
+                        except Exception:
+                            await asyncio.wait_for(
+                                bot.send_message(chat_id=cid, text=plain_text, parse_mode=None),
+                                timeout=5.0
+                            )
                         sent += 1
                         await asyncio.sleep(0.04)  # Telegram broadcast throttling
                     except Exception as e:
                         logger.warning(f"Failed to send reminder to telegram_id {cid}: {e}")
                         failed += 1
             else:
-
                 # If bot is not configured or in test mode, mark as sent for verification
                 sent = total
 
@@ -144,14 +177,20 @@ class ReminderService:
                 session.add(new_log)
             await session.commit()
 
+            msg_desc = f"Eslatma \"{club.name}\" to'garagining {sent} ta talabasiga muvaffaqiyatli yuborildi."
+            if sent == 0 and total > 0:
+                msg_desc = f"Eslatma talabalarga yetkazilmadi ({failed} ta xatolik, botga ulanmagan)."
+            elif failed > 0:
+                msg_desc += f" ({failed} ta xatolik)"
+
             return {
-                "success": True,
+                "success": sent > 0 or total == 0,
                 "club_id": club.id,
                 "club_name": club.name,
                 "total": total,
                 "sent": sent,
                 "failed": failed,
-                "message": f"Eslatma “{club.name}” to'garagining {sent} ta talabasiga muvaffaqiyatli yuborildi."
+                "message": msg_desc
             }
 
     @classmethod
@@ -206,10 +245,11 @@ async def run_reminder_scheduler(interval_seconds: int = 900):
     logger.info("Lesson reminder scheduler started.")
     while True:
         try:
-            await asyncio.sleep(interval_seconds)
             await ReminderService.check_and_send_scheduled_reminders()
+            await asyncio.sleep(interval_seconds)
         except asyncio.CancelledError:
             logger.info("Lesson reminder scheduler stopped.")
             break
         except Exception as e:
             logger.error(f"Error in reminder scheduler loop: {e}", exc_info=True)
+            await asyncio.sleep(60)

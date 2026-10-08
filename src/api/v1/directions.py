@@ -15,7 +15,7 @@ router = APIRouter(prefix="/directions", tags=["Direction Management"])
 @router.get("", response_model=List[DirectionResponse])
 async def list_directions(
     faculty_id: Optional[int] = Query(None, description="Fakultet ID bo'yicha filter"),
-    current_admin: Admin = Depends(get_current_admin),
+    current_admin: Admin = Depends(require_superadmin),
     session: AsyncSession = Depends(get_db)
 ):
     """Retrieve all study directions with parent faculty name and clubs count."""

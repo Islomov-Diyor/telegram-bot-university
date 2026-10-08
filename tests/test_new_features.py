@@ -81,7 +81,26 @@ async def test_teacher_role_creation_and_permissions():
         assert me_data["role"] == "teacher"
         assert me_data["club_id"] == assigned_club["id"]
 
+        # 4b. Teacher accesses /clubs -> returns only their assigned club
+        teacher_clubs_res = await client.get("/api/v1/clubs", headers=teacher_headers)
+        assert teacher_clubs_res.status_code == 200
+        t_clubs = teacher_clubs_res.json()
+        assert len(t_clubs) == 1
+        assert t_clubs[0]["id"] == assigned_club["id"]
+
         # 5. Teacher FORBIDDEN actions:
+        # - Cannot list faculties (403)
+        bad_fac_list = await client.get("/api/v1/faculties", headers=teacher_headers)
+        assert bad_fac_list.status_code == 403
+
+        # - Cannot list directions (403)
+        bad_dir_list = await client.get("/api/v1/directions", headers=teacher_headers)
+        assert bad_dir_list.status_code == 403
+
+        # - Cannot view admin dashboard overview stats (403)
+        bad_stats = await client.get("/api/v1/stats/overview", headers=teacher_headers)
+        assert bad_stats.status_code == 403
+
         # - Cannot create faculty
         bad_fac = await client.post(
             "/api/v1/faculties",

@@ -97,7 +97,12 @@ async function checkAuth() {
       const clubDesc = admin.club_name ? ` (${admin.club_name})` : '';
       document.getElementById('adminRole').innerText = `O'qituvchi${clubDesc}`;
 
-      // Hide superadmin-only tabs
+      // 1. Hide superadmin-only tabs
+      const navDashboard = document.getElementById('navDashboard');
+      if (navDashboard) navDashboard.style.display = 'none';
+      const tabDashboard = document.getElementById('tab-dashboard');
+      if (tabDashboard) tabDashboard.style.display = 'none';
+
       const navTeachers = document.getElementById('navTeachers');
       if (navTeachers) navTeachers.style.display = 'none';
       const navAcademic = document.getElementById('navAcademic');
@@ -105,19 +110,46 @@ async function checkAuth() {
       const navSettings = document.getElementById('navSettings');
       if (navSettings) navSettings.style.display = 'none';
 
-      // Hide club creation button
-      const btnAddClub = document.querySelector('button[onclick="openClubModal()"]');
-      if (btnAddClub) btnAddClub.style.display = 'none';
+      // 2. Rename navigation menu for Teacher
+      const navClubsText = document.getElementById('navClubsText');
+      if (navClubsText) navClubsText.innerText = "Mening To'garagim";
+      const navStudentsText = document.getElementById('navStudentsText');
+      if (navStudentsText) navStudentsText.innerText = "Talabalarim";
+      const navBroadcastText = document.getElementById('navBroadcastText');
+      if (navBroadcastText) navBroadcastText.innerText = "O'z To'garagimga Xabar";
 
-      if (['academic', 'settings', 'teachers'].includes(currentActiveTab)) {
-        currentActiveTab = 'attendance';
+      // 3. Customize pages for Teacher
+      const btnAddClubHeader = document.getElementById('btnAddClubHeader');
+      if (btnAddClubHeader) btnAddClubHeader.style.display = 'none';
+      const clubFilterToolbar = document.getElementById('clubFilterToolbar');
+      if (clubFilterToolbar) clubFilterToolbar.style.display = 'none';
+
+      const clubsPageTitle = document.getElementById('clubsPageTitle');
+      if (clubsPageTitle) clubsPageTitle.innerText = "Mening To'garagim";
+      const clubsPageDesc = document.getElementById('clubsPageDesc');
+      if (clubsPageDesc) clubsPageDesc.innerText = "O'zingizga biriktirilgan to'garak va mashg'ulotlar faoliyati";
+
+      const studentsPageTitle = document.getElementById('studentsPageTitle');
+      if (studentsPageTitle) studentsPageTitle.innerText = "Talabalarim Ro'yxati";
+      const studentsPageDesc = document.getElementById('studentsPageDesc');
+      if (studentsPageDesc) studentsPageDesc.innerText = "To'garagingizga a'zo bo'lgan talabalar va ularning aloqa ma'lumotlari";
+
+      const studentFilterFaculty = document.getElementById('studentFilterFaculty');
+      if (studentFilterFaculty) studentFilterFaculty.style.display = 'none';
+      const studentFilterClub = document.getElementById('studentFilterClub');
+      if (studentFilterClub) studentFilterClub.style.display = 'none';
+
+      // 4. Set teacher default active tab to 'clubs'
+      if (!currentActiveTab || currentActiveTab === 'dashboard' || ['academic', 'settings', 'teachers'].includes(currentActiveTab)) {
+        currentActiveTab = 'clubs';
       }
     } else {
       document.getElementById('adminRole').innerText = 'Super Admin';
     }
 
     if (admin.telegram_chat_id) {
-      document.getElementById('telegramChatIdInput').value = admin.telegram_chat_id;
+      const chatInput = document.getElementById('telegramChatIdInput');
+      if (chatInput) chatInput.value = admin.telegram_chat_id;
     }
   } catch (err) {
     window.location.href = '/login';
@@ -232,6 +264,15 @@ async function refreshCurrentTabSilent() {
 // Initial Common Data
 async function loadInitialData() {
   try {
+    if (window.currentUser && window.currentUser.role === 'teacher') {
+      const clubsRes = await apiFetch('/api/v1/clubs');
+      if (clubsRes.ok) {
+        currentClubs = await clubsRes.json();
+      }
+      populateStudentClubDropdown();
+      return;
+    }
+
     const [facRes, dirRes, clubsRes] = await Promise.all([
       apiFetch('/api/v1/faculties'),
       apiFetch('/api/v1/directions'),
@@ -439,19 +480,42 @@ async function loadClubs() {
               <div class="club-meta-item"><span>📞</span> <span><b>${t('form_club_contact')}:</b> ${c.leader_contact}</span></div>
             </div>
           </div>
-          <div class="club-footer">
+          <div class="club-footer" style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="editClub(${c.id})">
               ✏️ ${t('edit')}
             </button>
-            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteClub(${c.id})">
-              🗑 ${t('delete')}
+            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; border-color: rgba(245, 158, 11, 0.4); color: #FBBF24;" onclick="triggerClubReminderDirect(${c.id}, '${(c.name || '').replace(/'/g, "\\'")}')">
+              🔔 ${t('btn_send_reminder') || 'Dars eslatmasi'}
             </button>
+            ${window.currentUser && window.currentUser.role === 'teacher' ? '' : `
+              <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteClub(${c.id})">
+                🗑 ${t('delete')}
+              </button>
+            `}
           </div>
         </div>
       `;
     }).join('');
   } catch (err) {
     showToast(t('toast_refresh_error'), 'error');
+  }
+}
+
+async function triggerClubReminderDirect(clubId, clubName) {
+  if (!confirm(`“${clubName}” a'zolariga Telegram orqali bugungi mashg‘ulot eslatmasini yuborishni tasdiqlaysizmi?`)) {
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/v1/clubs/${clubId}/remind`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Eslatma yuborishda xatolik');
+    showToast(data.message, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
   }
 }
 
@@ -522,8 +586,9 @@ async function deleteClub(id) {
 
 // 3. STUDENTS REGISTRATIONS
 async function fetchStudents() {
-  const facultyId = document.getElementById('studentFilterFaculty').value;
-  const clubId = document.getElementById('studentFilterClub').value;
+  const isTeacher = window.currentUser && window.currentUser.role === 'teacher';
+  const facultyId = isTeacher ? '' : document.getElementById('studentFilterFaculty').value;
+  const clubId = isTeacher && window.currentUser.club_id ? window.currentUser.club_id : document.getElementById('studentFilterClub').value;
   const courseLevel = document.getElementById('studentFilterCourse').value;
   const statusEl = document.getElementById('studentFilterStatus');
   const statusVal = statusEl ? statusEl.value : '';
@@ -963,10 +1028,13 @@ function setupForms() {
         return;
       }
 
-      const target = document.querySelector('input[name="broadcastTarget"]:checked')?.value || 'all';
+      const isTeacher = window.currentUser && window.currentUser.role === 'teacher';
+      const target = isTeacher ? 'club' : (document.querySelector('input[name="broadcastTarget"]:checked')?.value || 'all');
       let clubId = null;
       if (target === 'club') {
-        clubId = parseInt(document.getElementById('broadcastClubSelect').value);
+        clubId = isTeacher && window.currentUser.club_id 
+          ? window.currentUser.club_id 
+          : parseInt(document.getElementById('broadcastClubSelect').value);
         if (!clubId) {
           showToast('Iltimos to\'garakni tanlang', 'error');
           return;
@@ -1071,7 +1139,10 @@ function setupForms() {
   if (attendanceLessonForm) {
     attendanceLessonForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const clubId = parseInt(document.getElementById('lessonModalClubId').value);
+      const isTeacher = window.currentUser && window.currentUser.role === 'teacher';
+      const clubId = isTeacher && window.currentUser.club_id 
+        ? window.currentUser.club_id 
+        : parseInt(document.getElementById('lessonModalClubId').value);
       const lessonDate = document.getElementById('lessonModalDate').value;
       const topic = document.getElementById('lessonModalTopic').value.trim();
 
@@ -1448,16 +1519,23 @@ async function loadAttendanceResults() {
 }
 
 function downloadAttendanceExcel() {
-  if (!currentAttendanceClubId) {
+  const isTeacher = window.currentUser && window.currentUser.role === 'teacher';
+  const clubId = isTeacher && window.currentUser.club_id ? window.currentUser.club_id : currentAttendanceClubId;
+  if (!clubId) {
     showToast('To\'garak tanlanmagan', 'error');
     return;
   }
-  window.open(`/api/v1/attendance/export?club_id=${currentAttendanceClubId}`, '_blank');
+  window.open(`/api/v1/attendance/export?club_id=${clubId}`, '_blank');
 }
 
 async function triggerClubReminderFromAttendance() {
-  if (!currentAttendanceClubId) return;
-  const club = currentClubs.find(c => c.id === currentAttendanceClubId);
+  const isTeacher = window.currentUser && window.currentUser.role === 'teacher';
+  const clubId = isTeacher && window.currentUser.club_id ? window.currentUser.club_id : currentAttendanceClubId;
+  if (!clubId) {
+    showToast('To\'garak tanlanmagan', 'error');
+    return;
+  }
+  const club = currentClubs.find(c => c.id === clubId);
   const clubName = club ? club.name : 'ushbu to\'garak';
 
   if (!confirm(`“${clubName}” a'zolariga Telegram orqali bugungi mashg‘ulot eslatmasini yuborishni tasdiqlaysizmi?`)) {

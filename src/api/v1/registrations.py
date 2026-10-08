@@ -28,7 +28,9 @@ async def list_registrations(
     Retrieve registered students directory with filtering, queue positions, and searching.
     """
     # Teacher scope enforcement
-    if current_admin.role == "teacher" and current_admin.club_id:
+    if current_admin.role == "teacher":
+        if not current_admin.club_id:
+            return {"total": 0, "limit": limit, "offset": offset, "items": []}
         club_id = current_admin.club_id
 
     repo = RegistrationRepository(session)

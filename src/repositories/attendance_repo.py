@@ -225,16 +225,19 @@ class AttendanceRepository(BaseRepository[AttendanceLesson]):
             absent = sum(1 for r in student_records if r.status == "absent")
             excused = sum(1 for r in student_records if r.status == "excused")
 
-            pct = round((attended / total_lessons_count * 100), 1) if total_lessons_count > 0 else 0.0
-
-            if pct >= 90:
-                grade_label = "A'lo (90-100%)"
-            elif pct >= 75:
-                grade_label = "Yaxshi (75-89%)"
-            elif pct >= 60:
-                grade_label = "Qoniqarli (60-74%)"
+            if total_lessons_count > 0:
+                pct = round((attended / total_lessons_count * 100), 1)
+                if pct >= 90:
+                    grade_label = "A'lo (90-100%)"
+                elif pct >= 75:
+                    grade_label = "Yaxshi (75-89%)"
+                elif pct >= 60:
+                    grade_label = "Qoniqarli (60-74%)"
+                else:
+                    grade_label = "Qoniqarsiz (<60%)"
             else:
-                grade_label = "Qoniqarsiz (<60%)"
+                pct = 0.0
+                grade_label = "— (Hali dars o'tilmagan)"
 
             students_summary.append({
                 "student_id": student.id,
