@@ -1100,11 +1100,26 @@ function setupForms() {
       const clubId = clubIdVal ? parseInt(clubIdVal) : null;
       const isActive = document.getElementById('teacherFormIsActive').checked;
 
+      if (!fullName) {
+        showToast('Iltimos, o‘qituvchi F.I.Sh kiriting', 'error');
+        return;
+      }
+      if (!username) {
+        showToast('Iltimos, o‘qituvchi loginini kiriting', 'error');
+        return;
+      }
+
       try {
         let res;
         if (id) {
           const payload = { full_name: fullName, club_id: clubId, is_active: isActive };
-          if (password) payload.new_password = password;
+          if (password) {
+            if (password.length < 6) {
+              showToast('Yangi parol kamida 6 ta belgidan iborat bo‘lishi kerak', 'error');
+              return;
+            }
+            payload.new_password = password;
+          }
           res = await apiFetch(`/api/v1/teachers/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -1112,7 +1127,11 @@ function setupForms() {
           });
         } else {
           if (!password) {
-            showToast('Iltimos yangi o\'qituvchi uchun parol kiriting', 'error');
+            showToast('Iltimos, yangi o‘qituvchi uchun parol kiriting', 'error');
+            return;
+          }
+          if (password.length < 6) {
+            showToast('Parol kamida 6 ta belgidan iborat bo‘lishi kerak', 'error');
             return;
           }
           res = await apiFetch('/api/v1/teachers', {
@@ -1123,9 +1142,17 @@ function setupForms() {
         }
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Xatolik');
+        if (!res.ok) {
+          let errorMsg = 'Xatolik yuz berdi';
+          if (typeof data.detail === 'string') {
+            errorMsg = data.detail;
+          } else if (Array.isArray(data.detail) && data.detail.length > 0) {
+            errorMsg = data.detail[0].msg || JSON.stringify(data.detail);
+          }
+          throw new Error(errorMsg);
+        }
 
-        showToast(id ? 'O\'qituvchi yangilandi' : 'Yangi o\'qituvchi muvaffaqiyatli yaratildi!', 'success');
+        showToast(id ? 'O‘qituvchi yangilandi' : 'Yangi o‘qituvchi muvaffaqiyatli yaratildi!', 'success');
         closeTeacherModal();
         await loadTeachersTab();
       } catch (err) {
@@ -1175,6 +1202,16 @@ function setupForms() {
       }
     });
   }
+
+  // Backdrop click dismiss for all modals
+  document.querySelectorAll('.modal-backdrop').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+        modal.classList.remove('active');
+      }
+    });
+  });
 }
 
 // ==========================================
@@ -1433,7 +1470,7 @@ function openAttendanceLessonModal() {
   currentClubs.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.name;
+    opt.textContent = c.leader_name ? `${c.name} (${c.leader_name})` : c.name;
     clubSelect.appendChild(opt);
   });
 
@@ -1447,11 +1484,16 @@ function openAttendanceLessonModal() {
 
   dateInput.value = new Date().toISOString().split('T')[0];
   topicInput.value = '';
+  modal.classList.add('show');
   modal.classList.add('active');
 }
 
 function closeAttendanceLessonModal() {
-  document.getElementById('attendanceLessonModal').classList.remove('active');
+  const modal = document.getElementById('attendanceLessonModal');
+  if (modal) {
+    modal.classList.remove('show');
+    modal.classList.remove('active');
+  }
 }
 
 async function loadAttendanceResults() {
@@ -1683,17 +1725,30 @@ async function loadTeachersTab() {
   }
 }
 
-function openTeacherModal(teacherId = null) {
+async function openTeacherModal(teacherId = null) {
   const modal = document.getElementById('teacherModal');
   const clubSelect = document.getElementById('teacherFormClubId');
 
-  clubSelect.innerHTML = '<option value="">To\'garakni tanlang</option>';
-  currentClubs.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = `${c.name} (${c.leader_name})`;
-    clubSelect.appendChild(opt);
-  });
+  if (!currentClubs || currentClubs.length === 0) {
+    try {
+      const res = await apiFetch('/api/v1/clubs');
+      if (res.ok) {
+        currentClubs = await res.json();
+      }
+    } catch (e) {
+      console.error('To\'garaklar ro\'yxatini yuklab bo\'lmadi:', e);
+    }
+  }
+
+  clubSelect.innerHTML = '<option value="">Tanlanmagan / To\'garaksiz</option>';
+  if (Array.isArray(currentClubs)) {
+    currentClubs.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.leader_name ? `${c.name} (${c.leader_name})` : c.name;
+      clubSelect.appendChild(opt);
+    });
+  }
 
   const pwdInput = document.getElementById('teacherFormPassword');
   const pwdLabel = document.getElementById('teacherFormPasswordLabel');
@@ -1723,15 +1778,20 @@ function openTeacherModal(teacherId = null) {
     pwdInput.value = '';
     pwdInput.required = true;
     pwdLabel.innerText = 'Maxfiy Parol *';
-    pwdHint.innerText = 'O\'qituvchi shu login va parol orqali tizimga kiradi';
+    pwdHint.innerText = 'O\'qituvchi shu login va parol orqali tizimga kiradi (kamida 6 ta belgi)';
     document.getElementById('teacherFormIsActive').checked = true;
   }
 
+  modal.classList.add('show');
   modal.classList.add('active');
 }
 
 function closeTeacherModal() {
-  document.getElementById('teacherModal').classList.remove('active');
+  const modal = document.getElementById('teacherModal');
+  if (modal) {
+    modal.classList.remove('show');
+    modal.classList.remove('active');
+  }
 }
 
 async function deleteTeacher(teacherId, teacherName) {
